@@ -576,11 +576,11 @@ function loadStockpileComponentOptions() {
 // LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════════════════════
 function fasLogin() {
-  if (v('fas-pw') === sbs123) { g('fas-pw').value = ''; g('alert-fas-login').innerHTML = ''; showPage('fas'); }
+  if (v('fas-pw') ===sbs123) { g('fas-pw').value = ''; g('alert-fas-login').innerHTML = ''; showPage('fas'); }
   else showAlert('alert-fas-login', 'Incorrect password.', 'error');
 }
 function labLogin() {
-  if (v('lab-pw') === sbs123) { g('lab-pw').value = ''; g('alert-lab-login').innerHTML = ''; showPage('lab'); }
+  if (v('lab-pw') ===sbs123) { g('lab-pw').value = ''; g('alert-lab-login').innerHTML = ''; showPage('lab'); }
   else showAlert('alert-lab-login', 'Incorrect password.', 'error');
 }
 function logout(role) { showPage('submit'); }
