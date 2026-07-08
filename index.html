@@ -3,152 +3,183 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sequencer Fail Tracking</title>
+<title>Sequencer Fail Tracker</title>
 <style>
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3350;
-    --accent: #4f8ef7;
-    --accent2: #7c3aed;
-    --danger: #ef4444;
-    --warn: #f59e0b;
-    --success: #10b981;
-    --text: #e2e8f0;
-    --muted: #8892a4;
-    --radius: 10px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
+  --accent: #4f8ef7; --accent2: #7c3aed; --accent3: #06b6d4;
+  --danger: #ef4444; --warn: #f59e0b; --success: #10b981;
+  --text: #e2e8f0; --muted: #8892a4; --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
 
-  /* NAV */
-  nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0; padding: 0 24px; height: 56px; }
-  nav .logo { font-weight: 700; font-size: 1rem; color: var(--accent); margin-right: 32px; white-space: nowrap; }
-  nav button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 0 16px; height: 56px; border-bottom: 2px solid transparent; transition: all .15s; }
-  nav button.active, nav button:hover { color: var(--text); border-bottom-color: var(--accent); }
-  nav .spacer { flex: 1; }
-  nav .fas-btn { background: var(--accent2); color: white; border-radius: 6px; height: 34px; padding: 0 16px; border-bottom: none !important; font-size: 0.85rem; }
-  nav .fas-btn:hover { background: #6d28d9; }
+/* NAV */
+nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; height: 54px; gap: 2px; }
+.nav-logo { font-weight: 700; font-size: .95rem; color: var(--accent); margin-right: 24px; white-space: nowrap; }
+.nav-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .875rem; padding: 0 14px; height: 54px; border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap; }
+.nav-btn.active, .nav-btn:hover { color: var(--text); border-bottom-color: var(--accent); }
+.nav-spacer { flex: 1; }
+.nav-pill { border-radius: 6px; height: 32px; padding: 0 14px; border-bottom: none !important; font-size: .8rem; font-weight: 500; margin-left: 6px; }
+.nav-fas { background: var(--accent2); color: #fff; }
+.nav-fas:hover { background: #6d28d9 !important; border-bottom-color: transparent !important; }
+.nav-lab { background: var(--accent3); color: #fff; }
+.nav-lab:hover { background: #0891b2 !important; border-bottom-color: transparent !important; }
 
-  /* LAYOUT */
-  main { max-width: 860px; margin: 0 auto; padding: 32px 16px; }
-  .page { display: none; }
-  .page.active { display: block; }
+/* LAYOUT */
+main { max-width: 900px; margin: 0 auto; padding: 28px 16px; }
+.page { display: none; }
+.page.active { display: block; }
 
-  /* CARDS */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
-  .card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 18px; color: var(--text); display: flex; align-items: center; gap: 8px; }
-  .card h2 .badge { font-size: 0.7rem; background: var(--accent); color: white; border-radius: 4px; padding: 2px 7px; font-weight: 500; }
+/* CARDS */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 18px; }
+.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.badge { font-size: .68rem; background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 7px; font-weight: 500; }
+.badge-warn { background: var(--warn); }
+.badge-success { background: var(--success); }
+.badge-accent2 { background: var(--accent2); }
 
-  /* FORMS */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-grid.one { grid-template-columns: 1fr; }
-  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 600px) { .form-grid, .form-grid.three { grid-template-columns: 1fr; } }
-  .field { display: flex; flex-direction: column; gap: 5px; }
-  .field.full { grid-column: 1 / -1; }
-  label { font-size: 0.8rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .03em; }
-  input, select, textarea {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: 9px 12px; font-size: 0.9rem; width: 100%;
-    transition: border-color .15s;
-  }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-  textarea { resize: vertical; min-height: 80px; }
-  select option { background: var(--surface2); }
+/* FORMS */
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fg3 { grid-template-columns: 1fr 1fr 1fr; }
+.fg1 { grid-template-columns: 1fr; }
+.full { grid-column: 1 / -1; }
+@media(max-width:600px) { .fg, .fg3 { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: .75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+input, select, textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 11px; font-size: .875rem; width: 100%; transition: border-color .15s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 72px; }
+select option { background: var(--surface2); }
 
-  /* BUTTONS */
-  .btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: none; border-radius: 7px; padding: 10px 20px; font-size: 0.9rem; font-weight: 500; transition: all .15s; }
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover { background: #3b7de8; }
-  .btn-success { background: var(--success); color: white; }
-  .btn-success:hover { background: #059669; }
-  .btn-danger { background: var(--danger); color: white; }
-  .btn-danger:hover { background: #dc2626; }
-  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { background: var(--border); }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: none; border-radius: 7px; padding: 9px 18px; font-size: .875rem; font-weight: 500; transition: all .15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #3b7de8; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn-danger  { background: var(--danger); color: #fff; }
+.btn-warn    { background: var(--warn); color: #000; }
+.btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--border); }
+.btn-sm { padding: 5px 12px; font-size: .78rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
 
-  /* STEP TABS (inside form) */
-  .step-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .step-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 0.85rem; transition: all .15s; }
-  .step-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+/* STEP TABS */
+.step-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.step-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 7px 15px; cursor: pointer; font-size: .85rem; transition: all .15s; }
+.step-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  /* SECTION DIVIDER */
-  .section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+/* INNER TAB BAR */
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 18px; overflow-x: auto; }
+.tab-bar button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 9px 16px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab-bar button.active { color: var(--text); border-bottom-color: var(--accent2); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
-  /* BALANCE TABLE */
-  .balance-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .balance-table th { text-align: left; color: var(--muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
-  .balance-table td { padding: 9px 12px; border-bottom: 1px solid rgba(46,51,80,.5); }
-  .balance-table tr:last-child td { border-bottom: none; }
-  .balance-table tr:hover td { background: rgba(255,255,255,.02); }
-  .balance-pill { display: inline-block; border-radius: 20px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; }
-  .pill-ok { background: rgba(16,185,129,.15); color: #10b981; }
-  .pill-warn { background: rgba(245,158,11,.15); color: #f59e0b; }
-  .pill-zero { background: rgba(139,148,164,.1); color: var(--muted); }
+/* SECTION LABEL */
+.section-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
 
-  /* LOG HISTORY */
-  .log-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
-  .log-item { background: var(--surface2); border-radius: 7px; padding: 10px 14px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .log-item .log-meta { color: var(--muted); font-size: 0.78rem; }
-  .log-item .log-qty { font-weight: 600; color: var(--success); white-space: nowrap; }
+/* TABLES */
+.tbl { width: 100%; border-collapse: collapse; font-size: .845rem; }
+.tbl th { text-align: left; color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tbl td { padding: 8px 10px; border-bottom: 1px solid rgba(46,51,80,.4); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(255,255,255,.02); }
 
-  /* STOCKPILE GAUGES */
-  .stockpile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 500px) { .stockpile-grid { grid-template-columns: 1fr; } }
-  .stockpile-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-  .stockpile-card .item-name { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
-  .stockpile-card .item-count { font-size: 2rem; font-weight: 700; line-height: 1; }
-  .stockpile-card .item-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
-  .count-ok { color: var(--success); }
-  .count-warn { color: var(--warn); }
-  .count-low { color: var(--danger); }
+/* BALANCE PILLS */
+.pill { display: inline-block; border-radius: 20px; padding: 2px 9px; font-size: .78rem; font-weight: 600; }
+.pill-ok   { background: rgba(16,185,129,.15); color: #10b981; }
+.pill-warn { background: rgba(245,158,11,.15); color: #f59e0b; }
+.pill-zero { background: rgba(139,148,164,.1); color: var(--muted); }
+.pill-pend { background: rgba(245,158,11,.15); color: #f59e0b; }
+.pill-done { background: rgba(16,185,129,.15); color: #10b981; }
 
-  /* ALERTS */
-  .alert { border-radius: 7px; padding: 12px 16px; font-size: 0.88rem; margin-bottom: 16px; }
-  .alert-success { background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3); color: #6ee7b7; }
-  .alert-error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
-  .alert-info { background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3); color: #93c5fd; }
+/* STOCKPILE CARDS */
+.stock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media(max-width:500px) { .stock-grid { grid-template-columns: 1fr; } }
+.stock-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.stock-name { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+.stock-count { font-size: 2rem; font-weight: 700; line-height: 1; }
+.stock-sub { font-size: .75rem; color: var(--muted); margin-top: 3px; }
+.cnt-ok   { color: var(--success); }
+.cnt-warn { color: var(--warn); }
+.cnt-low  { color: var(--danger); }
 
-  /* LOGIN */
-  .login-box { max-width: 360px; margin: 60px auto; }
-  .login-box h2 { text-align: center; margin-bottom: 24px; font-size: 1.3rem; }
+/* LOG LIST */
+.log-list { display: flex; flex-direction: column; gap: 7px; max-height: 340px; overflow-y: auto; }
+.log-item { background: var(--surface2); border-radius: 7px; padding: 9px 13px; font-size: .83rem; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.log-meta { color: var(--muted); font-size: .75rem; margin-top: 2px; }
+.log-qty { font-weight: 600; white-space: nowrap; }
+.log-out { color: var(--danger); }
+.log-in  { color: var(--success); }
 
-  /* TABS (FAS sections) */
-  .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-  .tab-bar button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.88rem; padding: 10px 18px; border-bottom: 2px solid transparent; }
-  .tab-bar button.active { color: var(--text); border-bottom-color: var(--accent2); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* ALERTS */
+.alert { border-radius: 7px; padding: 10px 14px; font-size: .85rem; margin-bottom: 14px; }
+.alert-success { background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3); color: #6ee7b7; }
+.alert-error   { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+.alert-info    { background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3); color: #93c5fd; }
 
-  /* MISC */
-  .hidden { display: none !important; }
-  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .mt { margin-top: 16px; }
-  .flex-end { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-  .text-muted { color: var(--muted); font-size: 0.85rem; }
-  .group-header { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); padding: 8px 12px 4px; }
+/* LOGIN */
+.login-box { max-width: 360px; margin: 50px auto; }
+.login-box h2 { text-align: center; margin-bottom: 20px; }
+
+/* REVIEW QUEUE */
+.queue-filters { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.filter-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 20px; padding: 4px 14px; cursor: pointer; font-size: .8rem; transition: all .15s; }
+.filter-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.queue-table-wrap { overflow-x: auto; }
+.queue-tbl { width: 100%; border-collapse: collapse; font-size: .82rem; min-width: 700px; }
+.queue-tbl th { text-align: left; color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 7px 8px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.queue-tbl td { padding: 7px 8px; border-bottom: 1px solid rgba(46,51,80,.4); vertical-align: middle; }
+.queue-tbl tr.pending-row td { background: rgba(245,158,11,.04); }
+.queue-tbl tr:hover td { background: rgba(255,255,255,.025); }
+.queue-tbl tr.pending-row:hover td { background: rgba(245,158,11,.08); }
+.inline-num { width: 64px; padding: 4px 7px; font-size: .82rem; }
+.save-row-btn { padding: 4px 10px; font-size: .75rem; }
+.no-data { text-align: center; color: var(--muted); padding: 32px; font-size: .9rem; }
+
+/* SETTINGS TAGS */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:600px) { .settings-grid { grid-template-columns: 1fr; } }
+.setting-group { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.setting-group-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); margin-bottom: 10px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-bottom: 10px; }
+.tag { display: inline-flex; align-items: center; gap: 5px; background: rgba(79,142,247,.15); border: 1px solid rgba(79,142,247,.3); color: var(--accent); border-radius: 20px; padding: 3px 10px; font-size: .78rem; }
+.tag-x { cursor: pointer; font-size: .9rem; line-height: 1; color: var(--muted); }
+.tag-x:hover { color: var(--danger); }
+.tag-add { display: flex; gap: 6px; }
+.tag-add input { flex: 1; padding: 5px 9px; font-size: .8rem; }
+.tag-add button { padding: 5px 12px; font-size: .78rem; }
+.setting-save { margin-top: 8px; }
+
+/* MISC */
+.hidden { display: none !important; }
+.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.flex-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.text-muted { color: var(--muted); font-size: .85rem; }
+.mt2 { margin-top: 8px; }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════ NAVIGATION -->
 <nav>
-  <span class="logo">🧬 Fail Tracker</span>
-  <button class="active" onclick="showPage('submit')">Submit Failure</button>
-  <button onclick="showPage('stockpile')">NVX Stockpile</button>
-  <span class="spacer"></span>
-  <button class="fas-btn" onclick="showPage('fas-login')">FAS View</button>
+  <span class="nav-logo">🧬 Fail Tracker</span>
+  <button class="nav-btn active" onclick="showPage('submit')">Submit Failure</button>
+  <button class="nav-btn" onclick="showPage('stockpile')">NVX Stockpile</button>
+  <span class="nav-spacer"></span>
+  <button class="nav-btn nav-pill nav-fas" onclick="showPage('fas-login')">FAS View</button>
+  <button class="nav-btn nav-pill nav-lab" onclick="showPage('lab-login')">Lab Manager</button>
 </nav>
 
-<!-- ═══════════════════════════════════════════════ SUBMIT PAGE -->
 <main>
+
+<!-- ═══════════════ SUBMIT PAGE ═══════════════ -->
 <div id="page-submit" class="page active">
   <div class="card">
-    <h2>Log a Sequencer Failure <span class="badge">Staff</span></h2>
+    <div class="card-title">Log a Sequencer Failure <span class="badge">Staff</span></div>
 
     <div class="step-tabs">
       <div class="step-tab active" onclick="setFormType('sequencer')">On-Sequencer Fail</div>
@@ -157,396 +188,155 @@
 
     <div id="alert-submit"></div>
 
-    <!-- ── SEQUENCER FAIL FORM ── -->
+    <!-- SEQUENCER FAIL -->
     <div id="form-sequencer">
-      <div class="form-grid">
-        <div class="field">
-          <label>Your Name</label>
-          <input type="text" id="sf-name" placeholder="First Last">
-        </div>
-        <div class="field">
-          <label>Run Start Date</label>
-          <input type="date" id="sf-date">
-        </div>
+      <div class="fg">
+        <div class="field"><label>Your Name</label><input id="sf-name" placeholder="First Last"></div>
+        <div class="field"><label>Run Start Date</label><input type="date" id="sf-date"></div>
         <div class="field">
           <label>Instrument Group</label>
-          <select id="sf-group" onchange="updateInstrumentOptions()">
+          <select id="sf-group" onchange="updateKitOptions()">
             <option value="">— select —</option>
             <option value="novaX">NovaSeq X Plus</option>
             <option value="nova6k">NovaSeq 6000 (Core)</option>
             <option value="wus">WUS Instruments</option>
           </select>
         </div>
-        <div class="field">
-          <label>Instrument Name</label>
-          <input type="text" id="sf-instrument" placeholder="e.g. EXB, SL-NXD">
-        </div>
-        <div class="field">
-          <label>Flowcell ID</label>
-          <input type="text" id="sf-fcid" placeholder="e.g. 227FCGLT3">
-        </div>
+        <div class="field"><label>Instrument Name</label><input id="sf-instrument" placeholder="e.g. EXB, SL-NXD"></div>
+        <div class="field"><label>Flowcell ID</label><input id="sf-fcid" placeholder="e.g. 227FCGLT3"></div>
         <div class="field">
           <label>Side</label>
           <select id="sf-side">
             <option value="">— N/A —</option>
-            <option>A</option>
-            <option>B</option>
-            <option>Both</option>
+            <option>A</option><option>B</option><option>Both</option>
           </select>
         </div>
-        <div class="field">
-          <label>Kit Type</label>
-          <select id="sf-kit">
-            <option value="">— select instrument group first —</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Sequencer State</label>
-          <select id="sf-state">
-            <option value="">— select —</option>
-            <option>Red Tagged</option>
-            <option>Operational</option>
-            <option>Yellow Tagged</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Fail Mode</label>
-          <select id="sf-failmode">
-            <option value="">— select —</option>
-            <option>Sequencing Failed</option>
-            <option>Pre-Run Check Failed</option>
-            <option>Software Error</option>
-            <option>Camera Error</option>
-            <option>Hardware Failure</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Team</label>
-          <select id="sf-team">
-            <option value="">— select —</option>
-            <option>Core</option>
-            <option>WUS</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Lanes Affected</label>
-          <input type="number" id="sf-lanes-affected" min="0" max="16" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Lanes Reworked / Rebooked</label>
-          <input type="number" id="sf-lanes-rework" min="0" max="16" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Lanes Reimbursable (FAS-Approved)</label>
-          <input type="number" id="sf-lanes-reimb" min="0" max="16" placeholder="0">
-        </div>
-        <div class="field">
-          <label>IS / BQMS Ticket #</label>
-          <input type="text" id="sf-ticket" placeholder="e.g. IS-7001 (or N/A)">
-        </div>
-        <div class="field full">
-          <label>Additional Notes</label>
-          <textarea id="sf-notes" placeholder="Describe the failure in detail..."></textarea>
-        </div>
+        <div class="field"><label>Kit Type</label><select id="sf-kit"><option value="">— select group first —</option></select></div>
+        <div class="field"><label>Sequencer State</label><select id="sf-state"></select></div>
+        <div class="field"><label>Fail Mode</label><select id="sf-failmode"><option value="">— select —</option></select></div>
+        <div class="field"><label>Team</label><select id="sf-team"><option value="">— select —</option></select></div>
+        <div class="field"><label>Lanes Affected</label><input type="number" id="sf-lanes" min="0" max="16" placeholder="0"></div>
+        <div class="field"><label>IS / BQMS Ticket #</label><input id="sf-ticket" placeholder="e.g. IS-7001 (or N/A)"></div>
+        <div class="field full"><label>Additional Notes</label><textarea id="sf-notes" placeholder="Describe the failure..."></textarea></div>
       </div>
       <div class="flex-end">
-        <button class="btn btn-primary" onclick="submitSequencerFail()">
-          <span id="sf-spinner" class="spinner hidden"></span> Submit Failure
-        </button>
+        <button class="btn btn-primary" onclick="submitSequencerFail()"><span id="sf-spin" class="spinner hidden"></span> Submit Failure</button>
       </div>
     </div>
 
-    <!-- ── INDIVIDUAL REAGENT FAIL FORM ── -->
+    <!-- REAGENT FAIL -->
     <div id="form-reagent" class="hidden">
-      <div class="form-grid">
-        <div class="field">
-          <label>Your Name</label>
-          <input type="text" id="rf-name" placeholder="First Last">
-        </div>
-        <div class="field">
-          <label>Date</label>
-          <input type="date" id="rf-date">
-        </div>
-        <div class="field">
-          <label>Reagent Type</label>
-          <select id="rf-reagent">
-            <option value="">— select —</option>
-            <optgroup label="NovaSeq X">
-              <option>NovaSeq 10B Flowcell</option>
-              <option>NovaSeq 25B Flowcell</option>
-              <option>NovaSeq X Buffer</option>
-              <option>NovaSeq X Reagent</option>
-              <option>PRC NVX Buffer</option>
-              <option>PRC 25B Flowcell</option>
-              <option>Lyo Insert</option>
-              <option>NovaSeq Strip Tube</option>
-            </optgroup>
-            <optgroup label="NovaSeq 6000">
-              <option>NovaSeq 6000 Cluster Kit</option>
-              <option>NovaSeq 6000 SBS</option>
-              <option>NovaSeq 6000 Flowcell</option>
-              <option>NovaSeq 6000 Buffer</option>
-              <option>NovaSeq Xp 4-Lane Kit</option>
-            </optgroup>
-            <optgroup label="WUS / Other">
-              <option>PLB</option>
-              <option>NextSeq 75</option>
-              <option>MiSeq 50</option>
-            </optgroup>
-          </select>
-        </div>
-        <div class="field">
-          <label>Lot Number</label>
-          <input type="text" id="rf-lot" placeholder="e.g. Lot 20755355, REF 20080370">
-        </div>
-        <div class="field">
-          <label>Quantity Affected</label>
-          <input type="number" id="rf-qty" min="1" placeholder="e.g. 2">
-        </div>
-        <div class="field">
-          <label>Approved Reimbursable Qty</label>
-          <input type="number" id="rf-qty-reimb" min="0" placeholder="0 if pending FAS approval">
-        </div>
-        <div class="field">
-          <label>BQMS Ticket # (if applicable)</label>
-          <input type="text" id="rf-ticket" placeholder="N/A">
-        </div>
-        <div class="field full">
-          <label>Details / Issue Description</label>
-          <textarea id="rf-notes" placeholder="Describe the reagent failure..."></textarea>
-        </div>
+      <div class="fg">
+        <div class="field"><label>Your Name</label><input id="rf-name" placeholder="First Last"></div>
+        <div class="field"><label>Date</label><input type="date" id="rf-date"></div>
+        <div class="field"><label>Reagent Type</label><select id="rf-reagent"><option value="">— select —</option></select></div>
+        <div class="field"><label>Lot Number</label><input id="rf-lot" placeholder="e.g. Lot 20755355, REF 20080370"></div>
+        <div class="field"><label>Quantity Affected</label><input type="number" id="rf-qty" min="1" placeholder="e.g. 2"></div>
+        <div class="field"><label>Approved Reimbursable Qty</label><input type="number" id="rf-qty-reimb" min="0" placeholder="0 if pending"></div>
+        <div class="field"><label>BQMS Ticket # (if applicable)</label><input id="rf-ticket" placeholder="N/A"></div>
+        <div class="field full"><label>Details / Issue Description</label><textarea id="rf-notes" placeholder="Describe the reagent failure..."></textarea></div>
       </div>
       <div class="flex-end">
-        <button class="btn btn-primary" onclick="submitReagentFail()">
-          <span id="rf-spinner" class="spinner hidden"></span> Submit Reagent Fail
-        </button>
+        <button class="btn btn-primary" onclick="submitReagentFail()"><span id="rf-spin" class="spinner hidden"></span> Submit Reagent Fail</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════ STOCKPILE PAGE -->
+<!-- ═══════════════ STOCKPILE PAGE ═══════════════ -->
 <div id="page-stockpile" class="page">
   <div class="card">
-    <h2>NVX On-Site Stockpile Checkout</h2>
-    <p class="text-muted" style="margin-bottom:18px;">Log when you take a flowcell or buffer cartridge from the FAS on-site stockpile. This only covers NovaSeq X components (flowcells + buffer).</p>
+    <div class="card-title">NVX Stockpile Checkout</div>
+    <p class="text-muted" style="margin-bottom:16px;">Log when you take a flowcell or buffer from the FAS on-site stockpile.</p>
     <div id="alert-stockpile"></div>
-    <div class="form-grid">
-      <div class="field">
-        <label>Your Name</label>
-        <input type="text" id="sc-name" placeholder="First Last">
-      </div>
-      <div class="field">
-        <label>Date Taken</label>
-        <input type="date" id="sc-date">
-      </div>
+    <div class="fg">
+      <div class="field"><label>Your Name</label><input id="sc-name" placeholder="First Last"></div>
+      <div class="field"><label>Date Taken</label><input type="date" id="sc-date"></div>
       <div class="field">
         <label>Component</label>
-        <select id="sc-component">
-          <option value="">— select —</option>
-          <option value="10B Flowcell">10B Flowcell</option>
-          <option value="25B Flowcell">25B Flowcell</option>
-          <option value="NVX Buffer Cartridge">NVX Buffer Cartridge</option>
-        </select>
+        <select id="sc-component"><option value="">— select —</option></select>
       </div>
-      <div class="field">
-        <label>Quantity Taken</label>
-        <input type="number" id="sc-qty" min="1" value="1">
-      </div>
-      <div class="field full">
-        <label>Reason / Notes</label>
-        <textarea id="sc-notes" placeholder="e.g. Pre-run check failed on EXC Side A — RFID burned, replacing flowcell"></textarea>
-      </div>
+      <div class="field"><label>Quantity Taken</label><input type="number" id="sc-qty" min="1" value="1"></div>
+      <div class="field full"><label>Reason / Notes</label><textarea id="sc-notes" placeholder="e.g. Pre-run check failed on EXC Side A — RFID burned, replacing flowcell"></textarea></div>
     </div>
     <div class="flex-end">
-      <button class="btn btn-primary" onclick="submitStockpileCheckout()">
-        <span id="sc-spinner" class="spinner hidden"></span> Log Checkout
-      </button>
+      <button class="btn btn-primary" onclick="submitStockpileCheckout()"><span id="sc-spin" class="spinner hidden"></span> Log Checkout</button>
     </div>
   </div>
 
-  <div class="card" id="stockpile-public-view">
-    <h2>Current Stockpile Levels</h2>
-    <p class="text-muted" style="margin-bottom:16px;">Live counts based on FAS-set inventory minus logged checkouts.</p>
-    <div class="stockpile-grid" id="stockpile-display">
-      <div class="stockpile-card">
-        <div class="item-name">10B Flowcell</div>
-        <div class="item-count" id="stock-10b">—</div>
-        <div class="item-sub">units remaining</div>
-      </div>
-      <div class="stockpile-card">
-        <div class="item-name">25B Flowcell</div>
-        <div class="item-count" id="stock-25b">—</div>
-        <div class="item-sub">units remaining</div>
-      </div>
-      <div class="stockpile-card">
-        <div class="item-name">NVX Buffer Cartridge</div>
-        <div class="item-count" id="stock-buf">—</div>
-        <div class="item-sub">units remaining</div>
-      </div>
+  <div class="card">
+    <div class="card-title">Current Stockpile Levels</div>
+    <div class="stock-grid">
+      <div class="stock-card"><div class="stock-name">10B Flowcell</div><div class="stock-count" id="st-10b">—</div><div class="stock-sub">remaining</div></div>
+      <div class="stock-card"><div class="stock-name">25B Flowcell</div><div class="stock-count" id="st-25b">—</div><div class="stock-sub">remaining</div></div>
+      <div class="stock-card"><div class="stock-name">NVX Buffer Cartridge</div><div class="stock-count" id="st-buf">—</div><div class="stock-sub">remaining</div></div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════ FAS LOGIN PAGE -->
+<!-- ═══════════════ FAS LOGIN ═══════════════ -->
 <div id="page-fas-login" class="page">
   <div class="login-box">
     <div class="card">
       <h2>🔒 FAS Access</h2>
-      <div id="alert-login"></div>
-      <div class="field" style="margin-bottom:14px;">
-        <label>Password</label>
-        <input type="password" id="fas-password" placeholder="Enter FAS password" onkeydown="if(event.key==='Enter')fasLogin()">
-      </div>
+      <div id="alert-fas-login"></div>
+      <div class="field" style="margin-bottom:12px;"><label>Password</label><input type="password" id="fas-pw" onkeydown="if(event.key==='Enter')fasLogin()"></div>
       <button class="btn btn-primary" style="width:100%" onclick="fasLogin()">Unlock FAS Dashboard</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════ FAS DASHBOARD PAGE -->
+<!-- ═══════════════ FAS DASHBOARD ═══════════════ -->
 <div id="page-fas" class="page">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-    <h1 style="font-size:1.2rem;font-weight:700;">FAS Reimbursement Dashboard</h1>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <button class="btn btn-ghost" onclick="loadFASData()" style="font-size:0.8rem;padding:7px 14px;">↻ Refresh</button>
-      <button class="btn btn-ghost" onclick="fasLogout()" style="font-size:0.8rem;padding:7px 14px;">Log Out</button>
+  <div class="flex-between">
+    <h1 style="font-size:1.1rem;font-weight:700;">FAS Reimbursement Dashboard</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="loadFASData()">↻ Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="logout('fas')">Log Out</button>
     </div>
   </div>
 
   <div class="tab-bar">
-    <button class="active" onclick="fasTab('balances')">Outstanding Balances</button>
-    <button onclick="fasTab('log-reimbursement')">Log Reimbursement</button>
-    <button onclick="fasTab('stockpile-mgmt')">Stockpile Management</button>
-    <button onclick="fasTab('history')">Transaction History</button>
+    <button class="active" onclick="fasTab('balances',this)">Outstanding Balances</button>
+    <button onclick="fasTab('log-reimb',this)">Log Reimbursement</button>
+    <button onclick="fasTab('stockpile-mgmt',this)">Stockpile Management</button>
+    <button onclick="fasTab('history',this)">Transaction History</button>
   </div>
 
-  <!-- ── BALANCES TAB ── -->
   <div id="fas-tab-balances" class="tab-panel active">
     <div id="alert-fas"></div>
-
+    <div class="card"><div class="card-title">NovaSeq X Plus</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-novax"></tbody></table></div>
+    <div class="card"><div class="card-title">NovaSeq 6000 (Core)</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-nova6k"></tbody></table></div>
+    <div class="card"><div class="card-title">WUS Instruments</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-wus"></tbody></table></div>
+    <div class="card"><div class="card-title">Individual Reagents</div><table class="tbl"><thead><tr><th>Reagent</th><th>Qty Affected</th><th>Qty Approved</th><th>Qty Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-reagents"></tbody></table></div>
     <div class="card">
-      <h2>NovaSeq X Plus — On-Sequencer Fails</h2>
-      <table class="balance-table">
-        <thead><tr><th>Kit Type</th><th>Lanes Failed</th><th>Lanes Reimbursable</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead>
-        <tbody id="bal-novaX"></tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>NovaSeq 6000 (Core) — On-Sequencer Fails</h2>
-      <table class="balance-table">
-        <thead><tr><th>Kit Type</th><th>Lanes Failed</th><th>Lanes Reimbursable</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead>
-        <tbody id="bal-nova6k"></tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>WUS Instruments — On-Sequencer Fails</h2>
-      <table class="balance-table">
-        <thead><tr><th>Kit Type</th><th>Lanes Failed</th><th>Lanes Reimbursable</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead>
-        <tbody id="bal-wus"></tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>Individual Reagents</h2>
-      <table class="balance-table">
-        <thead><tr><th>Reagent</th><th>Qty Affected</th><th>Qty Reimbursable</th><th>Qty Reimbursed</th><th>Balance</th></tr></thead>
-        <tbody id="bal-reagents"></tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>NVX Stockpile — Current Inventory</h2>
-      <p class="text-muted" style="margin-bottom:14px;font-size:0.82rem;">Set the starting inventory and the dashboard calculates remaining from checkouts.</p>
-      <div class="stockpile-grid">
-        <div class="stockpile-card">
-          <div class="item-name">10B Flowcell</div>
-          <div class="item-count" id="fas-stock-10b">—</div>
-          <div class="item-sub">remaining</div>
-        </div>
-        <div class="stockpile-card">
-          <div class="item-name">25B Flowcell</div>
-          <div class="item-count" id="fas-stock-25b">—</div>
-          <div class="item-sub">remaining</div>
-        </div>
-        <div class="stockpile-card">
-          <div class="item-name">NVX Buffer Cartridge</div>
-          <div class="item-count" id="fas-stock-buf">—</div>
-          <div class="item-sub">remaining</div>
-        </div>
+      <div class="card-title">NVX Stockpile</div>
+      <div class="stock-grid">
+        <div class="stock-card"><div class="stock-name">10B Flowcell</div><div class="stock-count" id="fas-st-10b">—</div><div class="stock-sub">remaining</div></div>
+        <div class="stock-card"><div class="stock-name">25B Flowcell</div><div class="stock-count" id="fas-st-25b">—</div><div class="stock-sub">remaining</div></div>
+        <div class="stock-card"><div class="stock-name">NVX Buffer Cartridge</div><div class="stock-count" id="fas-st-buf">—</div><div class="stock-sub">remaining</div></div>
       </div>
     </div>
   </div>
 
-  <!-- ── LOG REIMBURSEMENT TAB ── -->
-  <div id="fas-tab-log-reimbursement" class="tab-panel">
+  <div id="fas-tab-log-reimb" class="tab-panel">
     <div class="card">
-      <h2>Log a Reimbursement Transaction</h2>
-      <p class="text-muted" style="margin-bottom:18px;">Record when Illumina provides replacement consumables (kits ordered / delivered).</p>
+      <div class="card-title">Log a Reimbursement Transaction</div>
+      <p class="text-muted" style="margin-bottom:16px;">Record when Illumina provides replacement consumables.</p>
       <div id="alert-reimb"></div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Date Ordered / Received</label>
-          <input type="date" id="r-date">
-        </div>
+      <div class="fg">
+        <div class="field"><label>Date Ordered / Received</label><input type="date" id="r-date"></div>
         <div class="field">
           <label>Kit / Reagent Type</label>
           <select id="r-kit">
             <option value="">— select —</option>
-            <optgroup label="NovaSeq X (lanes)">
-              <option>10B</option>
-              <option>25B</option>
-              <option>5B</option>
-            </optgroup>
-            <optgroup label="NovaSeq 6000 (lanes)">
-              <option>NovaSeq SP 100</option>
-              <option>NovaSeq SP 200</option>
-              <option>NovaSeq SP 300</option>
-              <option>NovaSeq S1 100</option>
-              <option>NovaSeq S1 200</option>
-              <option>NovaSeq S1 300</option>
-              <option>NovaSeq S2 100</option>
-              <option>NovaSeq S2 200</option>
-              <option>NovaSeq S2 300</option>
-              <option>NovaSeq S4 200</option>
-              <option>NovaSeq S4 300</option>
-            </optgroup>
-            <optgroup label="WUS (lanes)">
-              <option>MiSeq 50</option>
-              <option>MiSeq 300</option>
-              <option>MiSeq 500</option>
-              <option>MiSeq 600</option>
-              <option>NextSeq 75</option>
-              <option>NextSeq 150</option>
-              <option>NextSeq 300</option>
-              <option>iSeq 300</option>
-              <option>NextSeq 2k P2 100</option>
-              <option>NextSeq 2k P2 300</option>
-              <option>NextSeq 2k P2 600</option>
-              <option>NextSeq 2k P3 100</option>
-              <option>NextSeq 2k P3 300</option>
-            </optgroup>
-            <optgroup label="Individual Reagents">
-              <option>NovaSeq 10B Flowcell</option>
-              <option>NovaSeq 25B Flowcell</option>
-              <option>NovaSeq X Buffer</option>
-              <option>NovaSeq X Reagent</option>
-              <option>NovaSeq 6000 Cluster Kit</option>
-              <option>NovaSeq 6000 SBS</option>
-              <option>NovaSeq 6000 Flowcell</option>
-              <option>NovaSeq 6000 Buffer</option>
-              <option>PLB</option>
-              <option>Lyo Insert</option>
-              <option>NovaSeq Strip Tube</option>
-            </optgroup>
+            <optgroup label="NovaSeq X (lanes)"><option>10B</option><option>25B</option><option>25B - 100c</option><option>5B</option></optgroup>
+            <optgroup label="NovaSeq 6000 (lanes)"><option>NovaSeq SP 100</option><option>NovaSeq SP 200</option><option>NovaSeq SP 300</option><option>NovaSeq S1 100</option><option>NovaSeq S1 200</option><option>NovaSeq S1 300</option><option>NovaSeq S2 100</option><option>NovaSeq S2 200</option><option>NovaSeq S2 300</option><option>NovaSeq S4 200</option><option>NovaSeq S4 300</option></optgroup>
+            <optgroup label="WUS (lanes)"><option>MiSeq 50</option><option>MiSeq 300</option><option>MiSeq 500</option><option>MiSeq 600</option><option>NextSeq 75</option><option>NextSeq 150</option><option>NextSeq 300</option><option>iSeq 300</option><option>NextSeq 2k P2 100</option><option>NextSeq 2k P2 300</option><option>NextSeq 2k P2 600</option><option>NextSeq 2k P3 100</option><option>NextSeq 2k P3 300</option></optgroup>
+            <optgroup label="Individual Reagents"><option>NovaSeq 10B Flowcell</option><option>NovaSeq 25B Flowcell</option><option>NovaSeq X Buffer</option><option>NovaSeq X Reagent</option><option>NovaSeq 6000 Cluster Kit</option><option>NovaSeq 6000 SBS</option><option>NovaSeq 6000 Flowcell</option><option>NovaSeq 6000 Buffer</option><option>PLB</option><option>Lyo Insert</option><option>NovaSeq Strip Tube</option></optgroup>
           </select>
         </div>
-        <div class="field">
-          <label>Amount (Lanes or Units)</label>
-          <input type="number" id="r-amount" min="1" placeholder="e.g. 48">
-        </div>
+        <div class="field"><label>Amount (Lanes or Units)</label><input type="number" id="r-amount" min="1" placeholder="e.g. 48"></div>
         <div class="field">
           <label>Reimbursement Type</label>
           <select id="r-type">
@@ -556,444 +346,617 @@
             <option value="given-to-team">Given to Team (from stockpile)</option>
           </select>
         </div>
-        <div class="field full">
-          <label>Notes</label>
-          <textarea id="r-notes" placeholder="Optional: order number, PO, context..."></textarea>
-        </div>
+        <div class="field full"><label>Notes</label><textarea id="r-notes" placeholder="Optional: order number, PO, context..."></textarea></div>
       </div>
-      <div class="flex-end">
-        <button class="btn btn-success" onclick="submitReimbursement()">
-          <span id="r-spinner" class="spinner hidden"></span> Log Reimbursement
-        </button>
-      </div>
+      <div class="flex-end"><button class="btn btn-success" onclick="submitReimbursement()"><span id="r-spin" class="spinner hidden"></span> Log Reimbursement</button></div>
     </div>
   </div>
 
-  <!-- ── STOCKPILE MGMT TAB ── -->
   <div id="fas-tab-stockpile-mgmt" class="tab-panel">
     <div class="card">
-      <h2>Replenish Stockpile</h2>
-      <p class="text-muted" style="margin-bottom:18px;">Log when you add flowcells or buffers to the on-site stockpile.</p>
-      <div id="alert-stock-mgmt"></div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Date Added</label>
-          <input type="date" id="sp-date">
-        </div>
-        <div class="field">
-          <label>Component</label>
-          <select id="sp-component">
-            <option value="">— select —</option>
-            <option>10B Flowcell</option>
-            <option>25B Flowcell</option>
-            <option>NVX Buffer Cartridge</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Quantity Added</label>
-          <input type="number" id="sp-qty" min="1" value="1">
-        </div>
-        <div class="field full">
-          <label>Notes (source, PO, etc.)</label>
-          <textarea id="sp-notes" placeholder="e.g. Restocked from Illumina order #12345"></textarea>
-        </div>
+      <div class="card-title">Replenish Stockpile</div>
+      <div id="alert-sp-mgmt"></div>
+      <div class="fg">
+        <div class="field"><label>Date Added</label><input type="date" id="sp-date"></div>
+        <div class="field"><label>Component</label><select id="sp-component"><option value="">— select —</option><option>10B Flowcell</option><option>25B Flowcell</option><option>NVX Buffer Cartridge</option></select></div>
+        <div class="field"><label>Quantity Added</label><input type="number" id="sp-qty" min="1" value="1"></div>
+        <div class="field full"><label>Notes (source, PO, etc.)</label><textarea id="sp-notes" placeholder="e.g. Restocked from Illumina order #12345"></textarea></div>
       </div>
-      <div class="flex-end">
-        <button class="btn btn-success" onclick="submitStockpileReplenish()">
-          <span id="sp-spinner" class="spinner hidden"></span> Add to Stockpile
-        </button>
-      </div>
+      <div class="flex-end"><button class="btn btn-success" onclick="submitStockpileReplenish()"><span id="sp-spin" class="spinner hidden"></span> Add to Stockpile</button></div>
     </div>
-
     <div class="card">
-      <h2>Recent Stockpile Checkouts (by Staff)</h2>
-      <div class="log-list" id="stockpile-checkout-log">
-        <div class="text-muted" style="padding:12px;">Loading...</div>
-      </div>
+      <div class="card-title">Stockpile Log (Checkouts &amp; Replenishments)</div>
+      <div class="log-list" id="fas-stock-log"><div class="text-muted" style="padding:12px;">Loading...</div></div>
     </div>
   </div>
 
-  <!-- ── HISTORY TAB ── -->
   <div id="fas-tab-history" class="tab-panel">
     <div class="card">
-      <h2>Reimbursement Transaction Log</h2>
-      <div class="log-list" id="reimb-history">
-        <div class="text-muted" style="padding:12px;">Loading...</div>
-      </div>
+      <div class="card-title">Reimbursement Transaction Log</div>
+      <div class="log-list" id="reimb-history"><div class="text-muted" style="padding:12px;">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LAB MANAGER LOGIN ═══════════════ -->
+<div id="page-lab-login" class="page">
+  <div class="login-box">
+    <div class="card">
+      <h2 style="color:var(--accent3);">🔬 Lab Manager Access</h2>
+      <div id="alert-lab-login"></div>
+      <div class="field" style="margin-bottom:12px;"><label>Password</label><input type="password" id="lab-pw" onkeydown="if(event.key==='Enter')labLogin()"></div>
+      <button class="btn" style="width:100%;background:var(--accent3);color:#fff;" onclick="labLogin()">Unlock Lab Manager</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LAB MANAGER DASHBOARD ═══════════════ -->
+<div id="page-lab" class="page">
+  <div class="flex-between">
+    <h1 style="font-size:1.1rem;font-weight:700;color:var(--accent3);">Lab Manager Dashboard</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="loadLabData()">↻ Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="logout('lab')">Log Out</button>
     </div>
   </div>
 
-</div><!-- /page-fas -->
+  <div class="tab-bar">
+    <button class="active" onclick="labTab('queue',this)">Fail Review Queue</button>
+    <button onclick="labTab('settings',this)">Settings</button>
+  </div>
+
+  <!-- QUEUE TAB -->
+  <div id="lab-tab-queue" class="tab-panel active">
+    <div id="alert-lab"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div class="queue-filters">
+          <span class="text-muted" style="font-size:.8rem;">Show:</span>
+          <button class="filter-btn active" onclick="setQueueFilter('pending',this)">⏳ Pending</button>
+          <button class="filter-btn" onclick="setQueueFilter('all',this)">All</button>
+          <button class="filter-btn" onclick="setQueueFilter('reviewed',this)">✓ Reviewed</button>
+        </div>
+        <select id="queue-group-filter" onchange="renderQueue()" style="width:auto;padding:5px 10px;font-size:.8rem;">
+          <option value="">All Instrument Groups</option>
+          <option value="novaX">NovaSeq X Plus</option>
+          <option value="nova6k">NovaSeq 6000</option>
+          <option value="wus">WUS</option>
+        </select>
+      </div>
+      <div class="queue-table-wrap">
+        <table class="queue-tbl">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Submitted By</th>
+              <th>Instrument</th>
+              <th>Kit / Lanes Lost</th>
+              <th>Fail Mode</th>
+              <th>IS Ticket</th>
+              <th>Status</th>
+              <th>Lanes Reworked</th>
+              <th>Lanes Approved</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="queue-tbody"></tbody>
+        </table>
+      </div>
+      <div id="queue-empty" class="no-data hidden">No entries match the current filter.</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="lab-tab-settings" class="tab-panel">
+    <div id="alert-settings"></div>
+    <p class="text-muted" style="margin-bottom:18px;">Edit the options available in every dropdown across the dashboard. Changes take effect for all users on next page load.</p>
+    <div class="settings-grid" id="settings-panels"></div>
+  </div>
+</div>
+
 </main>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// CONFIGURATION — paste your Apps Script Web App URL here
-// ══════════════════════════════════════════════════════════════
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyAPXq9e_bxfWeE7OmzHWp7N7_K6ixkeZ4jX1mK8Lvo4YpnZjd7V7foFyFwAchufhkReQ/exec';
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIGURATION — fill these in before deploying
+// ═══════════════════════════════════════════════════════════════════════
+const SCRIPT_URL   = 'YOUR_APPS_SCRIPT_URL_HERE';
+const FAS_PASSWORD = 'YOUR_FAS_PASSWORD_HERE';
+const LAB_PASSWORD = 'YOUR_LAB_MANAGER_PASSWORD_HERE';
 
-// FAS password (change this to your desired password)
-const FAS_PASSWORD = 'sbs123';
-
-// ══════════════════════════════════════════════════════════════
-// KIT OPTIONS BY INSTRUMENT GROUP
-// ══════════════════════════════════════════════════════════════
-const KIT_OPTIONS = {
-  novaX: ['10B', '25B', '25B - 100c', '5B'],
-  nova6k: ['NovaSeq SP 100','NovaSeq SP 200','NovaSeq SP 300',
-            'NovaSeq S1 100','NovaSeq S1 200','NovaSeq S1 300',
-            'NovaSeq S2 100','NovaSeq S2 200','NovaSeq S2 300',
-            'NovaSeq S4 200','NovaSeq S4 300'],
-  wus: ['MiSeq 50','MiSeq 300','MiSeq 500','MiSeq 600',
-        'NextSeq 75','NextSeq 150','NextSeq 300','iSeq 300',
-        'NextSeq 2k P2 100','NextSeq 2k P2 300','NextSeq 2k P2 600',
-        'NextSeq 2k P3 100','NextSeq 2k P3 300']
+// ═══════════════════════════════════════════════════════════════════════
+// LIVE SETTINGS (loaded from Apps Script; fallback to defaults)
+// ═══════════════════════════════════════════════════════════════════════
+const DEFAULT_SETTINGS = {
+  teams:           ['Batch Sequencing', 'Flow Sequencing'],
+  failModes:       ['Sequencing Failed', 'Pre-Run Check Failed', 'Software Error', 'Camera Error', 'Hardware Failure', 'Other'],
+  sequencerStates: ['Red Tagged', 'Operational', 'Yellow Tagged'],
+  novaXKits:       ['10B', '25B', '25B - 100c', '5B'],
+  nova6kKits:      ['NovaSeq SP 100','NovaSeq SP 200','NovaSeq SP 300','NovaSeq S1 100','NovaSeq S1 200','NovaSeq S1 300','NovaSeq S2 100','NovaSeq S2 200','NovaSeq S2 300','NovaSeq S4 200','NovaSeq S4 300'],
+  wusKits:         ['MiSeq 50','MiSeq 300','MiSeq 500','MiSeq 600','NextSeq 75','NextSeq 150','NextSeq 300','iSeq 300','NextSeq 2k P2 100','NextSeq 2k P2 300','NextSeq 2k P2 600','NextSeq 2k P3 100','NextSeq 2k P3 300'],
+  reagentTypes:    ['NovaSeq 10B Flowcell','NovaSeq 25B Flowcell','NovaSeq X Buffer','NovaSeq X Reagent','PRC NVX Buffer','PRC 25B Flowcell','Lyo Insert','NovaSeq Strip Tube','NovaSeq 6000 Cluster Kit','NovaSeq 6000 SBS','NovaSeq 6000 Flowcell','NovaSeq 6000 Buffer','NovaSeq Xp 4-Lane Kit','PLB','NextSeq 75','MiSeq 50'],
+  nvxComponents:   ['10B Flowcell','25B Flowcell','NVX Buffer Cartridge']
 };
+let SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 
-// Lanes per kit (for reference display)
-const LANES = { novaX: 8, nova6k: 4, wus: 1 };
+// Queue state
+let allFailData = [];
+let queueFilter = 'pending';
 
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// LANES-PER-KIT (for kits+lanes display in Andrew's queue)
+// ═══════════════════════════════════════════════════════════════════════
+function lanesPerKit(group, kit) {
+  if (group === 'novaX') return 8;
+  if (group === 'nova6k') {
+    if (kit && kit.includes('SP')) return 2;
+    return 4;
+  }
+  return 0; // WUS — just show lanes
+}
+
+function fmtKitsLanes(lanes, group, kit) {
+  if (!lanes && lanes !== 0) return '—';
+  const lpk = lanesPerKit(group, kit);
+  if (!lpk) return `${lanes} lane${lanes !== 1 ? 's' : ''}`;
+  const kits = +(lanes / lpk).toFixed(1);
+  return `${kits} kit${kits !== 1 ? 's' : ''} (${lanes} lanes)`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // NAVIGATION
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  const navMap = { submit: 0, stockpile: 1 };
-  if (navMap[id] !== undefined) document.querySelectorAll('nav button')[navMap[id]].classList.add('active');
-  if (id === 'stockpile') loadStockpileLevels();
-  if (id === 'fas') loadFASData();
+  const map = { submit: 0, stockpile: 1 };
+  if (map[id] !== undefined) document.querySelectorAll('.nav-btn')[map[id]].classList.add('active');
+  if (id === 'stockpile') { loadStockpileLevels(); loadStockpileComponentOptions(); }
+  if (id === 'fas')  loadFASData();
+  if (id === 'lab')  loadLabData();
 }
 
-function fasTab(id) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+function fasTab(id, btn) {
+  document.querySelectorAll('#page-fas .tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-fas .tab-bar button').forEach(b => b.classList.remove('active'));
   document.getElementById('fas-tab-' + id).classList.add('active');
-  event.target.classList.add('active');
+  btn.classList.add('active');
 }
 
-// ══════════════════════════════════════════════════════════════
-// FORM TYPE SWITCH
-// ══════════════════════════════════════════════════════════════
+function labTab(id, btn) {
+  document.querySelectorAll('#page-lab .tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-lab .tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('lab-tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'settings') renderSettingsPanels();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FORM SWITCH
+// ═══════════════════════════════════════════════════════════════════════
 function setFormType(type) {
-  document.querySelectorAll('.step-tab').forEach((t, i) => {
-    t.classList.toggle('active', (i === 0 && type === 'sequencer') || (i === 1 && type === 'reagent'));
-  });
-  document.getElementById('form-sequencer').classList.toggle('hidden', type !== 'sequencer');
-  document.getElementById('form-reagent').classList.toggle('hidden', type !== 'reagent');
-  document.getElementById('alert-submit').innerHTML = '';
+  document.querySelectorAll('.step-tab').forEach((t, i) => t.classList.toggle('active', i === (type === 'sequencer' ? 0 : 1)));
+  g('form-sequencer').classList.toggle('hidden', type !== 'sequencer');
+  g('form-reagent').classList.toggle('hidden', type !== 'reagent');
+  g('alert-submit').innerHTML = '';
 }
 
-// ══════════════════════════════════════════════════════════════
-// KIT DROPDOWN LOGIC
-// ══════════════════════════════════════════════════════════════
-function updateInstrumentOptions() {
-  const group = document.getElementById('sf-group').value;
-  const kitSel = document.getElementById('sf-kit');
-  kitSel.innerHTML = '';
-  if (!group) { kitSel.innerHTML = '<option value="">— select instrument group first —</option>'; return; }
-  KIT_OPTIONS[group].forEach(k => {
-    const o = document.createElement('option'); o.value = k; o.textContent = k; kitSel.appendChild(o);
-  });
+function updateKitOptions() {
+  const group = v('sf-group');
+  const sel   = g('sf-kit');
+  sel.innerHTML = '';
+  const kits = group === 'novaX' ? SETTINGS.novaXKits : group === 'nova6k' ? SETTINGS.nova6kKits : group === 'wus' ? SETTINGS.wusKits : [];
+  if (!kits.length) { sel.innerHTML = '<option value="">— select group first —</option>'; return; }
+  kits.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; sel.appendChild(o); });
 }
 
-// ══════════════════════════════════════════════════════════════
-// FAS LOGIN
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// POPULATE DROPDOWNS FROM SETTINGS
+// ═══════════════════════════════════════════════════════════════════════
+function populateDropdowns() {
+  populateSelect('sf-failmode', SETTINGS.failModes);
+  populateSelect('sf-state', SETTINGS.sequencerStates, '— select —');
+  populateSelect('sf-team', SETTINGS.teams, '— select —');
+  populateSelect('rf-reagent', SETTINGS.reagentTypes, '— select —');
+  loadStockpileComponentOptions();
+}
+
+function populateSelect(id, items, placeholder) {
+  const sel = g(id); if (!sel) return;
+  sel.innerHTML = placeholder ? `<option value="">` + placeholder + `</option>` : '';
+  items.forEach(item => { const o = document.createElement('option'); o.value = o.textContent = item; sel.appendChild(o); });
+}
+
+function loadStockpileComponentOptions() {
+  populateSelect('sc-component', SETTINGS.nvxComponents, '— select —');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════════════════════
 function fasLogin() {
-  const pw = document.getElementById('fas-password').value;
-  if (pw === FAS_PASSWORD) {
-    showPage('fas');
-    document.getElementById('fas-password').value = '';
-    document.getElementById('alert-login').innerHTML = '';
-  } else {
-    showAlert('alert-login', 'Incorrect password.', 'error');
-  }
+  if (v('fas-pw') === FAS_PASSWORD) { g('fas-pw').value = ''; g('alert-fas-login').innerHTML = ''; showPage('fas'); }
+  else showAlert('alert-fas-login', 'Incorrect password.', 'error');
+}
+function labLogin() {
+  if (v('lab-pw') === LAB_PASSWORD) { g('lab-pw').value = ''; g('alert-lab-login').innerHTML = ''; showPage('lab'); }
+  else showAlert('alert-lab-login', 'Incorrect password.', 'error');
+}
+function logout(role) { showPage('submit'); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// API — JSONP for reads, no-cors POST for writes
+// ═══════════════════════════════════════════════════════════════════════
+function jsonp(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1000);
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('JSONP timeout')); }, 12000);
+    function cleanup() { clearTimeout(timeout); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    const url = new URL(SCRIPT_URL);
+    url.searchParams.set('action', action);
+    url.searchParams.set('callback', cbName);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const script = document.createElement('script');
+    script.src = url.toString();
+    script.onerror = () => { cleanup(); reject(new Error('Script load failed')); };
+    document.head.appendChild(script);
+  });
 }
 
-function fasLogout() {
-  showPage('submit');
-}
-
-// ══════════════════════════════════════════════════════════════
-// API CALLS
-// ══════════════════════════════════════════════════════════════
 async function post(action, payload) {
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
+  await fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, ...payload })
   });
-  // no-cors returns opaque — assume success; errors surface via GET
 }
 
-async function get(action, params = {}) {
-  const url = new URL(SCRIPT_URL);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString());
-  return res.json();
-}
-
-// ══════════════════════════════════════════════════════════════
-// SUBMIT SEQUENCER FAIL
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// SUBMIT: SEQUENCER FAIL
+// ═══════════════════════════════════════════════════════════════════════
 async function submitSequencerFail() {
   const name = v('sf-name'), date = v('sf-date'), group = v('sf-group'),
-        instrument = v('sf-instrument'), fcid = v('sf-fcid'), side = v('sf-side'),
-        kit = v('sf-kit'), state = v('sf-state'), failmode = v('sf-failmode'),
-        team = v('sf-team'), lanesAff = v('sf-lanes-affected'),
-        lanesRework = v('sf-lanes-rework'), lanesReim = v('sf-lanes-reimb'),
-        ticket = v('sf-ticket'), notes = v('sf-notes');
-
-  if (!name || !date || !group || !instrument || !failmode || !lanesAff) {
-    return showAlert('alert-submit', 'Please fill in: Name, Date, Instrument Group, Instrument Name, Fail Mode, and Lanes Affected.', 'error');
-  }
-
-  setLoading('sf-spinner', true);
+        inst = v('sf-instrument'), fcid = v('sf-fcid'), side = v('sf-side'),
+        kit  = v('sf-kit'), state = v('sf-state'), fm = v('sf-failmode'),
+        team = v('sf-team'), lanes = v('sf-lanes'), ticket = v('sf-ticket'), notes = v('sf-notes');
+  if (!name || !date || !group || !inst || !fm || !lanes)
+    return showAlert('alert-submit', 'Please fill in: Name, Date, Instrument Group, Instrument, Fail Mode, and Lanes Affected.', 'error');
+  spin('sf-spin', true);
   try {
-    await post('submitSequencerFail', {
-      timestamp: new Date().toISOString(), name, date, group, instrument,
-      fcid, side, kit, state, failmode, team,
-      lanesAffected: +lanesAff, lanesRework: +lanesRework || 0,
-      lanesReimbursable: +lanesReim || 0, ticket, notes
-    });
-    showAlert('alert-submit', '✓ Failure logged successfully! Thank you.', 'success');
-    clearForm(['sf-name','sf-fcid','sf-ticket','sf-notes','sf-lanes-affected','sf-lanes-rework','sf-lanes-reimb']);
-  } catch(e) {
-    showAlert('alert-submit', 'Submission failed. Please try again or contact your admin.', 'error');
-  } finally {
-    setLoading('sf-spinner', false);
-  }
+    await post('submitSequencerFail', { timestamp: new Date().toISOString(), name, date, group, instrument: inst, fcid, side, kit, state, failmode: fm, team, lanesAffected: +lanes, ticket, notes });
+    showAlert('alert-submit', '✓ Failure logged successfully! It will appear in the Lab Manager review queue.', 'success');
+    clearFields(['sf-name','sf-fcid','sf-ticket','sf-notes','sf-lanes']);
+  } catch(e) { showAlert('alert-submit', 'Submission failed. Please try again.', 'error'); }
+  finally { spin('sf-spin', false); }
 }
 
-// ══════════════════════════════════════════════════════════════
-// SUBMIT REAGENT FAIL
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// SUBMIT: REAGENT FAIL
+// ═══════════════════════════════════════════════════════════════════════
 async function submitReagentFail() {
   const name = v('rf-name'), date = v('rf-date'), reagent = v('rf-reagent'),
-        lot = v('rf-lot'), qty = v('rf-qty'), qtyReim = v('rf-qty-reimb'),
+        lot  = v('rf-lot'),  qty  = v('rf-qty'),  qtyR = v('rf-qty-reimb'),
         ticket = v('rf-ticket'), notes = v('rf-notes');
-
-  if (!name || !date || !reagent || !qty) {
+  if (!name || !date || !reagent || !qty)
     return showAlert('alert-submit', 'Please fill in: Name, Date, Reagent Type, and Quantity Affected.', 'error');
-  }
-
-  setLoading('rf-spinner', true);
+  spin('rf-spin', true);
   try {
-    await post('submitReagentFail', {
-      timestamp: new Date().toISOString(), name, date, reagent, lot,
-      qty: +qty, qtyReimbursable: +qtyReim || 0, ticket, notes
-    });
+    await post('submitReagentFail', { timestamp: new Date().toISOString(), name, date, reagent, lot, qty: +qty, qtyReimbursable: +qtyR || 0, ticket, notes });
     showAlert('alert-submit', '✓ Reagent failure logged successfully!', 'success');
-    clearForm(['rf-name','rf-lot','rf-qty','rf-qty-reimb','rf-ticket','rf-notes']);
-  } catch(e) {
-    showAlert('alert-submit', 'Submission failed. Please try again.', 'error');
-  } finally {
-    setLoading('rf-spinner', false);
-  }
+    clearFields(['rf-name','rf-lot','rf-qty','rf-qty-reimb','rf-ticket','rf-notes']);
+  } catch(e) { showAlert('alert-submit', 'Submission failed. Please try again.', 'error'); }
+  finally { spin('rf-spin', false); }
 }
 
-// ══════════════════════════════════════════════════════════════
-// STOCKPILE CHECKOUT (staff)
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// STOCKPILE CHECKOUT
+// ═══════════════════════════════════════════════════════════════════════
 async function submitStockpileCheckout() {
-  const name = v('sc-name'), date = v('sc-date'),
-        component = v('sc-component'), qty = v('sc-qty'), notes = v('sc-notes');
-
-  if (!name || !date || !component || !qty) {
-    return showAlert('alert-stockpile', 'Please fill in all required fields.', 'error');
-  }
-
-  setLoading('sc-spinner', true);
+  const name = v('sc-name'), date = v('sc-date'), comp = v('sc-component'), qty = v('sc-qty'), notes = v('sc-notes');
+  if (!name || !date || !comp || !qty) return showAlert('alert-stockpile', 'Please fill in all fields.', 'error');
+  spin('sc-spin', true);
   try {
-    await post('submitStockpileCheckout', {
-      timestamp: new Date().toISOString(), name, date, component,
-      qty: +qty, notes, direction: 'out'
-    });
+    await post('submitStockpileEntry', { timestamp: new Date().toISOString(), name, date, component: comp, qty: +qty, notes, direction: 'out' });
     showAlert('alert-stockpile', '✓ Stockpile checkout logged.', 'success');
-    clearForm(['sc-name','sc-qty','sc-notes']);
-    document.getElementById('sc-component').value = '';
-    setTimeout(() => loadStockpileLevels(), 800);
-  } catch(e) {
-    showAlert('alert-stockpile', 'Submission failed. Please try again.', 'error');
-  } finally {
-    setLoading('sc-spinner', false);
-  }
+    clearFields(['sc-name','sc-qty','sc-notes']); g('sc-component').value = '';
+    setTimeout(loadStockpileLevels, 800);
+  } catch(e) { showAlert('alert-stockpile', 'Submission failed. Please try again.', 'error'); }
+  finally { spin('sc-spin', false); }
 }
 
-// ══════════════════════════════════════════════════════════════
-// FAS: LOAD ALL DATA
-// ══════════════════════════════════════════════════════════════
+async function loadStockpileLevels() {
+  try {
+    const data = await jsonp('getStockpile');
+    setStockCount('st-10b', data['10B Flowcell'] || 0);
+    setStockCount('st-25b', data['25B Flowcell'] || 0);
+    setStockCount('st-buf', data['NVX Buffer Cartridge'] || 0);
+  } catch(e) { /* silent on public view */ }
+}
+
+function setStockCount(id, n) {
+  const el = g(id); if (!el) return;
+  el.textContent = n;
+  el.className = 'stock-count ' + (n <= 0 ? 'cnt-low' : n <= 2 ? 'cnt-warn' : 'cnt-ok');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FAS DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════
 async function loadFASData() {
   try {
-    const [balances, stockpile, reimbHist, checkoutHist] = await Promise.all([
-      get('getBalances'),
-      get('getStockpile'),
-      get('getReimbursements'),
-      get('getStockpileLog')
+    const [balances, stockpile, reimbHist, stockLog] = await Promise.all([
+      jsonp('getBalances'), jsonp('getStockpile'), jsonp('getReimbursements'), jsonp('getStockpileLog')
     ]);
     renderBalances(balances);
-    renderStockpileFAS(stockpile);
+    setStockCount('fas-st-10b', stockpile['10B Flowcell'] || 0);
+    setStockCount('fas-st-25b', stockpile['25B Flowcell'] || 0);
+    setStockCount('fas-st-buf', stockpile['NVX Buffer Cartridge'] || 0);
     renderReimbHistory(reimbHist);
-    renderCheckoutLog(checkoutHist);
-  } catch(e) {
-    showAlert('alert-fas', 'Could not load data. Check your SCRIPT_URL configuration.', 'error');
-  }
+    renderStockpileLog(stockLog);
+  } catch(e) { showAlert('alert-fas', 'Could not load data: ' + e.message + '. Check your SCRIPT_URL and Apps Script deployment.', 'error'); }
 }
 
 function renderBalances(data) {
-  renderBalanceTable('bal-novaX', data.novaX || []);
-  renderBalanceTable('bal-nova6k', data.nova6k || []);
-  renderBalanceTable('bal-wus', data.wus || []);
-  renderBalanceTable('bal-reagents', data.reagents || [], true);
+  renderBalTable('bal-novax',    data.novaX    || []);
+  renderBalTable('bal-nova6k',   data.nova6k   || []);
+  renderBalTable('bal-wus',      data.wus      || []);
+  renderBalTable('bal-reagents', data.reagents || [], true);
 }
 
-function renderBalanceTable(tbodyId, rows, isReagent = false) {
-  const tbody = document.getElementById(tbodyId);
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted" style="padding:12px">No entries yet.</td></tr>'; return; }
+function renderBalTable(id, rows, isReagent = false) {
+  const tb = g(id);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="text-muted" style="padding:12px">No entries yet.</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => {
+    const bal   = (r.reimbursable || 0) - (r.reimbursed || 0);
+    const cls   = bal <= 0 ? 'pill-zero' : bal > 20 ? 'pill-warn' : 'pill-ok';
+    const label = isReagent ? r.reagent : r.kit;
+    return `<tr><td><strong>${label}</strong></td><td>${r.affected||0}</td><td>${r.reimbursable||0}</td><td>${r.reimbursed||0}</td><td><span class="pill ${cls}">${bal>0?'+':''}${bal}</span></td></tr>`;
+  }).join('');
+}
+
+function renderReimbHistory(rows) {
+  const el = g('reimb-history');
+  if (!rows.length) { el.innerHTML = '<div class="text-muted" style="padding:12px">No reimbursements logged yet.</div>'; return; }
+  el.innerHTML = [...rows].reverse().map(r =>
+    `<div class="log-item"><div><div><strong>${r.kit}</strong> — ${r.type||''}</div><div class="log-meta">${r.date}${r.notes?' · '+r.notes:''}</div></div><div class="log-qty log-in">+${r.amount}</div></div>`
+  ).join('');
+}
+
+function renderStockpileLog(rows) {
+  const el = g('fas-stock-log');
+  if (!rows || !rows.length) { el.innerHTML = '<div class="text-muted" style="padding:12px">No stockpile activity yet.</div>'; return; }
+  el.innerHTML = [...rows].reverse().slice(0, 50).map(r => {
+    const isIn = r.direction === 'in';
+    return `<div class="log-item">
+      <div><div><strong>${r.component}</strong> — ${isIn ? '➕ Added by FAS' : '➖ Taken by ' + r.name}</div><div class="log-meta">${r.date}${r.notes?' · '+r.notes:''}</div></div>
+      <div class="log-qty ${isIn ? 'log-in' : 'log-out'}">${isIn?'+':'-'}${r.qty}</div>
+    </div>`;
+  }).join('');
+}
+
+async function submitReimbursement() {
+  const date = v('r-date'), kit = v('r-kit'), amount = v('r-amount'), type = v('r-type'), notes = v('r-notes');
+  if (!date || !kit || !amount) return showAlert('alert-reimb', 'Please fill in Date, Kit/Reagent Type, and Amount.', 'error');
+  spin('r-spin', true);
+  try {
+    await post('submitReimbursement', { timestamp: new Date().toISOString(), date, kit, amount: +amount, type, notes });
+    showAlert('alert-reimb', '✓ Reimbursement logged.', 'success');
+    clearFields(['r-date','r-amount','r-notes']); g('r-kit').value = '';
+    setTimeout(loadFASData, 800);
+  } catch(e) { showAlert('alert-reimb', 'Failed. Please try again.', 'error'); }
+  finally { spin('r-spin', false); }
+}
+
+async function submitStockpileReplenish() {
+  const date = v('sp-date'), comp = v('sp-component'), qty = v('sp-qty'), notes = v('sp-notes');
+  if (!date || !comp || !qty) return showAlert('alert-sp-mgmt', 'Please fill in all fields.', 'error');
+  spin('sp-spin', true);
+  try {
+    await post('submitStockpileEntry', { timestamp: new Date().toISOString(), name: 'FAS (replenish)', date, component: comp, qty: +qty, notes, direction: 'in' });
+    showAlert('alert-sp-mgmt', '✓ Stockpile replenished.', 'success');
+    clearFields(['sp-date','sp-qty','sp-notes']); g('sp-component').value = '';
+    setTimeout(loadFASData, 800);
+  } catch(e) { showAlert('alert-sp-mgmt', 'Failed. Please try again.', 'error'); }
+  finally { spin('sp-spin', false); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LAB MANAGER: REVIEW QUEUE
+// ═══════════════════════════════════════════════════════════════════════
+async function loadLabData() {
+  try {
+    allFailData = await jsonp('getFailSubmissions');
+    renderQueue();
+  } catch(e) { showAlert('alert-lab', 'Could not load fail submissions: ' + e.message, 'error'); }
+}
+
+function setQueueFilter(filter, btn) {
+  queueFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderQueue();
+}
+
+function renderQueue() {
+  const groupFilter = v('queue-group-filter');
+  let rows = allFailData.filter(r => {
+    if (groupFilter && r.group !== groupFilter) return false;
+    if (queueFilter === 'pending') return r.pending;
+    if (queueFilter === 'reviewed') return !r.pending;
+    return true;
+  });
+
+  // Pending first, then by date descending
+  rows.sort((a, b) => {
+    if (a.pending !== b.pending) return a.pending ? -1 : 1;
+    return new Date(b.date) - new Date(a.date);
+  });
+
+  const tbody = g('queue-tbody');
+  const empty = g('queue-empty');
+
+  if (!rows.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
   tbody.innerHTML = rows.map(r => {
-    const balance = (r.reimbursable || 0) - (r.reimbursed || 0);
-    const pillClass = balance <= 0 ? 'pill-zero' : balance > 20 ? 'pill-warn' : 'pill-ok';
-    return `<tr>
-      <td><strong>${r.kit || r.reagent || '—'}</strong></td>
-      <td>${r.affected || 0}</td>
-      <td>${r.reimbursable || 0}</td>
-      <td>${r.reimbursed || 0}</td>
-      <td><span class="balance-pill ${pillClass}">${balance > 0 ? '+' : ''}${balance}</span></td>
+    const statusBadge = r.pending
+      ? `<span class="pill pill-pend">Pending</span>`
+      : `<span class="pill pill-done">Reviewed</span>`;
+    const kitsLabel = fmtKitsLanes(r.lanesAffected, r.group, r.kit);
+    const reworkVal  = r.lanesRework  !== null && r.lanesRework  !== undefined ? r.lanesRework  : '';
+    const approvedVal = r.lanesApproved !== null && r.lanesApproved !== undefined ? r.lanesApproved : '';
+    return `<tr class="${r.pending ? 'pending-row' : ''}" data-uuid="${r.uuid}">
+      <td style="white-space:nowrap">${r.date}</td>
+      <td>${r.name}</td>
+      <td>${r.instrument}${r.side ? ' / ' + r.side : ''}</td>
+      <td><strong>${r.kit||'—'}</strong><br><span style="color:var(--muted);font-size:.75rem">${kitsLabel}</span></td>
+      <td>${r.failmode}</td>
+      <td>${r.ticket ? `<code style="font-size:.78rem;color:var(--accent)">${r.ticket}</code>` : '—'}</td>
+      <td>${statusBadge}</td>
+      <td><input class="inline-num" type="number" min="0" placeholder="—" value="${reworkVal}" id="rw-${r.uuid}"></td>
+      <td><input class="inline-num" type="number" min="0" placeholder="—" value="${approvedVal}" id="ap-${r.uuid}" title="Enter 0 to mark as approved with no reimbursement"></td>
+      <td><button class="btn btn-sm btn-success save-row-btn" onclick="saveFailEntry('${r.uuid}')">Save</button></td>
     </tr>`;
   }).join('');
 }
 
-function renderStockpileFAS(data) {
-  setStockCount('fas-stock-10b', data['10B Flowcell'] || 0);
-  setStockCount('fas-stock-25b', data['25B Flowcell'] || 0);
-  setStockCount('fas-stock-buf', data['NVX Buffer Cartridge'] || 0);
+async function saveFailEntry(uuid) {
+  const rwEl = g('rw-' + uuid);
+  const apEl = g('ap-' + uuid);
+  const lanesRework   = rwEl.value !== '' ? +rwEl.value : '';
+  const lanesApproved = apEl.value !== '' ? +apEl.value : '';
+
+  const btn = rwEl.closest('tr').querySelector('.save-row-btn');
+  btn.disabled = true; btn.textContent = '…';
+
+  try {
+    await post('updateFailEntry', { uuid, lanesRework, lanesApproved });
+    // Optimistic update in local data
+    const entry = allFailData.find(r => r.uuid === uuid);
+    if (entry) {
+      entry.lanesRework   = lanesRework   !== '' ? lanesRework   : null;
+      entry.lanesApproved = lanesApproved !== '' ? lanesApproved : null;
+      entry.pending       = lanesApproved === '';
+    }
+    renderQueue();
+    showAlert('alert-lab', '✓ Entry updated successfully.', 'success');
+    setTimeout(() => { const al = g('alert-lab'); if (al) al.innerHTML = ''; }, 3000);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Save';
+    showAlert('alert-lab', 'Save failed: ' + e.message, 'error');
+  }
 }
 
-function renderReimbHistory(rows) {
-  const el = document.getElementById('reimb-history');
-  if (!rows.length) { el.innerHTML = '<div class="text-muted" style="padding:12px">No reimbursements logged yet.</div>'; return; }
-  el.innerHTML = rows.slice().reverse().map(r =>
-    `<div class="log-item">
-      <div>
-        <div><strong>${r.kit}</strong> — ${r.type || ''}</div>
-        <div class="log-meta">${r.date} ${r.notes ? '· ' + r.notes : ''}</div>
+// ═══════════════════════════════════════════════════════════════════════
+// LAB MANAGER: SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════════════════
+const SETTING_LABELS = {
+  teams:           'Teams',
+  failModes:       'Fail Modes',
+  sequencerStates: 'Sequencer States',
+  novaXKits:       'Kit Types — NovaSeq X Plus',
+  nova6kKits:      'Kit Types — NovaSeq 6000',
+  wusKits:         'Kit Types — WUS Instruments',
+  reagentTypes:    'Reagent Types',
+  nvxComponents:   'NVX Stockpile Components'
+};
+
+function renderSettingsPanels() {
+  const container = g('settings-panels');
+  container.innerHTML = Object.entries(SETTING_LABELS).map(([key, label]) => `
+    <div class="setting-group" id="sg-${key}">
+      <div class="setting-group-label">${label}</div>
+      <div class="tag-list" id="tags-${key}"></div>
+      <div class="tag-add">
+        <input type="text" id="new-${key}" placeholder="Add new option…" onkeydown="if(event.key==='Enter')addTag('${key}')">
+        <button class="btn btn-sm btn-ghost" onclick="addTag('${key}')">+ Add</button>
       </div>
-      <div class="log-qty">+${r.amount} units</div>
-    </div>`
+      <div class="mt2">
+        <button class="btn btn-sm btn-success setting-save" onclick="saveSetting('${key}')"><span id="sspin-${key}" class="spinner hidden"></span> Save</button>
+      </div>
+    </div>
+  `).join('');
+  refreshAllTagLists();
+}
+
+function refreshAllTagLists() {
+  Object.keys(SETTING_LABELS).forEach(refreshTagList);
+}
+
+function refreshTagList(key) {
+  const container = g('tags-' + key); if (!container) return;
+  const items = SETTINGS[key] || [];
+  container.innerHTML = items.map((item, i) =>
+    `<span class="tag">${item} <span class="tag-x" onclick="removeTag('${key}',${i})">×</span></span>`
   ).join('');
 }
 
-function renderCheckoutLog(rows) {
-  const el = document.getElementById('stockpile-checkout-log');
-  if (!rows || !rows.length) { el.innerHTML = '<div class="text-muted" style="padding:12px">No checkouts logged yet.</div>'; return; }
-  el.innerHTML = rows.slice().reverse().slice(0, 30).map(r =>
-    `<div class="log-item">
-      <div>
-        <div><strong>${r.component}</strong> — taken by ${r.name}</div>
-        <div class="log-meta">${r.date} ${r.notes ? '· ' + r.notes : ''}</div>
-      </div>
-      <div class="log-qty" style="color:var(--danger)">−${r.qty}</div>
-    </div>`
-  ).join('');
+function addTag(key) {
+  const input = g('new-' + key); if (!input) return;
+  const val   = input.value.trim(); if (!val) return;
+  if (!SETTINGS[key]) SETTINGS[key] = [];
+  if (!SETTINGS[key].includes(val)) {
+    SETTINGS[key].push(val);
+    refreshTagList(key);
+  }
+  input.value = '';
 }
 
-// ══════════════════════════════════════════════════════════════
-// PUBLIC STOCKPILE LEVELS
-// ══════════════════════════════════════════════════════════════
-async function loadStockpileLevels() {
+function removeTag(key, index) {
+  if (!SETTINGS[key]) return;
+  SETTINGS[key].splice(index, 1);
+  refreshTagList(key);
+}
+
+async function saveSetting(key) {
+  spin('sspin-' + key, true);
   try {
-    const data = await get('getStockpile');
-    setStockCount('stock-10b', data['10B Flowcell'] || 0);
-    setStockCount('stock-25b', data['25B Flowcell'] || 0);
-    setStockCount('stock-buf', data['NVX Buffer Cartridge'] || 0);
-  } catch(e) { /* silently fail on public view */ }
+    await post('updateSetting', { key, values: SETTINGS[key] });
+    populateDropdowns(); // refresh all dropdowns immediately
+    showAlert('alert-settings', `✓ "${SETTING_LABELS[key]}" saved. All dropdowns updated.`, 'success');
+    setTimeout(() => { const al = g('alert-settings'); if (al) al.innerHTML = ''; }, 4000);
+  } catch(e) { showAlert('alert-settings', 'Save failed: ' + e.message, 'error'); }
+  finally { spin('sspin-' + key, false); }
 }
 
-function setStockCount(id, n) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = n;
-  el.className = 'item-count ' + (n <= 0 ? 'count-low' : n <= 2 ? 'count-warn' : 'count-ok');
-}
-
-// ══════════════════════════════════════════════════════════════
-// FAS: SUBMIT REIMBURSEMENT
-// ══════════════════════════════════════════════════════════════
-async function submitReimbursement() {
-  const date = v('r-date'), kit = v('r-kit'), amount = v('r-amount'),
-        type = v('r-type'), notes = v('r-notes');
-
-  if (!date || !kit || !amount) {
-    return showAlert('alert-reimb', 'Please fill in Date, Kit/Reagent Type, and Amount.', 'error');
-  }
-
-  setLoading('r-spinner', true);
+// ═══════════════════════════════════════════════════════════════════════
+// SETTINGS LOADER (runs on startup)
+// ═══════════════════════════════════════════════════════════════════════
+async function loadSettings() {
+  if (SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return; // not configured, use defaults
   try {
-    await post('submitReimbursement', {
-      timestamp: new Date().toISOString(), date, kit, amount: +amount, type, notes
-    });
-    showAlert('alert-reimb', '✓ Reimbursement logged successfully.', 'success');
-    clearForm(['r-date','r-amount','r-notes']);
-    document.getElementById('r-kit').value = '';
-    setTimeout(() => loadFASData(), 800);
-  } catch(e) {
-    showAlert('alert-reimb', 'Failed to submit. Please try again.', 'error');
-  } finally {
-    setLoading('r-spinner', false);
-  }
+    const data = await jsonp('getSettings');
+    if (data && !data.error) {
+      // Merge with defaults for any missing keys
+      Object.keys(DEFAULT_SETTINGS).forEach(k => {
+        if (data[k] && Array.isArray(data[k]) && data[k].length) SETTINGS[k] = data[k];
+      });
+    }
+  } catch(e) { /* use defaults silently */ }
+  populateDropdowns();
 }
 
-// ══════════════════════════════════════════════════════════════
-// FAS: STOCKPILE REPLENISH
-// ══════════════════════════════════════════════════════════════
-async function submitStockpileReplenish() {
-  const date = v('sp-date'), component = v('sp-component'),
-        qty = v('sp-qty'), notes = v('sp-notes');
-
-  if (!date || !component || !qty) {
-    return showAlert('alert-stock-mgmt', 'Please fill in all required fields.', 'error');
-  }
-
-  setLoading('sp-spinner', true);
-  try {
-    await post('submitStockpileCheckout', {
-      timestamp: new Date().toISOString(), name: 'FAS (replenish)', date,
-      component, qty: +qty, notes, direction: 'in'
-    });
-    showAlert('alert-stock-mgmt', '✓ Stockpile replenished.', 'success');
-    clearForm(['sp-date','sp-qty','sp-notes']);
-    document.getElementById('sp-component').value = '';
-    setTimeout(() => loadFASData(), 800);
-  } catch(e) {
-    showAlert('alert-stock-mgmt', 'Failed to submit. Please try again.', 'error');
-  } finally {
-    setLoading('sp-spinner', false);
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 // HELPERS
-// ══════════════════════════════════════════════════════════════
-function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
-function clearForm(ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
-function setLoading(spinnerId, on) {
-  document.getElementById(spinnerId)?.classList.toggle('hidden', !on);
-}
-function showAlert(containerId, msg, type) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
+// ═══════════════════════════════════════════════════════════════════════
+function g(id) { return document.getElementById(id); }
+function v(id) { return g(id)?.value?.trim() || ''; }
+function clearFields(ids) { ids.forEach(id => { const el = g(id); if (el) el.value = ''; }); }
+function spin(id, on) { g(id)?.classList.toggle('hidden', !on); }
+function showAlert(id, msg, type) {
+  const el = g(id); if (!el) return;
   el.innerHTML = `<div class="alert alert-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}">${msg}</div>`;
-  if (type === 'success') setTimeout(() => { el.innerHTML = ''; }, 5000);
+  if (type === 'success') setTimeout(() => { if (el) el.innerHTML = ''; }, 5000);
 }
 
-// Set today's date as default on all date inputs
-window.addEventListener('load', () => {
+// Init
+window.addEventListener('load', async () => {
   const today = new Date().toISOString().split('T')[0];
   document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+  populateDropdowns(); // populate with defaults immediately
+  await loadSettings(); // then override with server settings if available
 });
 </script>
 </body>
