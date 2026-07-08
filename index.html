@@ -460,9 +460,9 @@ select option { background: var(--surface2); }
 // ═══════════════════════════════════════════════════════════════════════
 // CONFIGURATION — fill these in before deploying
 // ═══════════════════════════════════════════════════════════════════════
-const SCRIPT_URL   = 'YOUR_APPS_SCRIPT_URL_HERE';
-const FAS_PASSWORD = 'YOUR_FAS_PASSWORD_HERE';
-const LAB_PASSWORD = 'YOUR_LAB_MANAGER_PASSWORD_HERE';
+const SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycbyAPXq9e_bxfWeE7OmzHWp7N7_K6ixkeZ4jX1mK8Lvo4YpnZjd7V7foFyFwAchufhkReQ/exec';
+const FAS_PASSWORD = 'sbs123';
+const LAB_PASSWORD = 'sbs123';
 
 // ═══════════════════════════════════════════════════════════════════════
 // LIVE SETTINGS (loaded from Apps Script; fallback to defaults)
@@ -576,11 +576,11 @@ function loadStockpileComponentOptions() {
 // LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════════════════════
 function fasLogin() {
-  if (v('fas-pw') ===sbs123) { g('fas-pw').value = ''; g('alert-fas-login').innerHTML = ''; showPage('fas'); }
+  if (v('fas-pw') === FAS_PASSWORD) { g('fas-pw').value = ''; g('alert-fas-login').innerHTML = ''; showPage('fas'); }
   else showAlert('alert-fas-login', 'Incorrect password.', 'error');
 }
 function labLogin() {
-  if (v('lab-pw') ===sbs123) { g('lab-pw').value = ''; g('alert-lab-login').innerHTML = ''; showPage('lab'); }
+  if (v('lab-pw') === LAB_PASSWORD) { g('lab-pw').value = ''; g('alert-lab-login').innerHTML = ''; showPage('lab'); }
   else showAlert('alert-lab-login', 'Incorrect password.', 'error');
 }
 function logout(role) { showPage('submit'); }
