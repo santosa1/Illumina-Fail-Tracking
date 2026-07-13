@@ -328,13 +328,7 @@ select option { background: var(--surface2); }
         <div class="field"><label>Date Ordered / Received</label><input type="date" id="r-date"></div>
         <div class="field">
           <label>Kit / Reagent Type</label>
-          <select id="r-kit">
-            <option value="">— select —</option>
-            <optgroup label="NovaSeq X (lanes)"><option>10B</option><option>25B</option><option>25B - 100c</option><option>5B</option></optgroup>
-            <optgroup label="NovaSeq 6000 (lanes)"><option>NovaSeq SP 100</option><option>NovaSeq SP 200</option><option>NovaSeq SP 300</option><option>NovaSeq S1 100</option><option>NovaSeq S1 200</option><option>NovaSeq S1 300</option><option>NovaSeq S2 100</option><option>NovaSeq S2 200</option><option>NovaSeq S2 300</option><option>NovaSeq S4 200</option><option>NovaSeq S4 300</option></optgroup>
-            <optgroup label="WUS (lanes)"><option>MiSeq 50</option><option>MiSeq 300</option><option>MiSeq 500</option><option>MiSeq 600</option><option>NextSeq 75</option><option>NextSeq 150</option><option>NextSeq 300</option><option>iSeq 300</option><option>NextSeq 2k P2 100</option><option>NextSeq 2k P2 300</option><option>NextSeq 2k P2 600</option><option>NextSeq 2k P3 100</option><option>NextSeq 2k P3 300</option></optgroup>
-            <optgroup label="Individual Reagents"><option>NovaSeq 10B Flowcell</option><option>NovaSeq 25B Flowcell</option><option>NovaSeq X Buffer</option><option>NovaSeq X Reagent</option><option>NovaSeq 6000 Cluster Kit</option><option>NovaSeq 6000 SBS</option><option>NovaSeq 6000 Flowcell</option><option>NovaSeq 6000 Buffer</option><option>PLB</option><option>Lyo Insert</option><option>NovaSeq Strip Tube</option></optgroup>
-          </select>
+          <select id="r-kit"><option value="">— select —</option></select>
         </div>
         <div class="field"><label>Amount (Lanes or Units)</label><input type="number" id="r-amount" min="1" placeholder="e.g. 48"></div>
         <div class="field">
@@ -599,6 +593,29 @@ function populateDropdowns() {
   populateSelect('sf-team', SETTINGS.teams, '— select —');
   populateSelect('rf-reagent', SETTINGS.reagentTypes, '— select —');
   loadStockpileComponentOptions();
+  populateFASReimbSelect();
+}
+
+function populateFASReimbSelect() {
+  const sel = g('r-kit'); if (!sel) return;
+  sel.innerHTML = '<option value="">— select —</option>';
+  const groups = [
+    { label: 'NovaSeq X Plus (lanes)',    items: SETTINGS.novaXKits },
+    { label: 'NovaSeq 6000 (lanes)',      items: SETTINGS.nova6kKits },
+    { label: 'WUS Instruments (lanes)',   items: SETTINGS.wusKits },
+    { label: 'Individual Reagents',       items: SETTINGS.reagentTypes }
+  ];
+  groups.forEach(({ label, items }) => {
+    if (!items || !items.length) return;
+    const grp = document.createElement('optgroup');
+    grp.label = label;
+    items.forEach(item => {
+      const o = document.createElement('option');
+      o.value = o.textContent = item;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  });
 }
 
 function populateSelect(id, items, placeholder) {
