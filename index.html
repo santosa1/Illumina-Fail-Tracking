@@ -230,7 +230,7 @@ select option { background: var(--surface2); }
         <div class="field"><label>Your Name</label><input id="rf-name" placeholder="First Last"></div>
         <div class="field"><label>Date</label><input type="date" id="rf-date"></div>
         <div class="field"><label>Reagent Type</label><select id="rf-reagent"><option value="">— select —</option></select></div>
-        <div class="field"><label>Lot Number</label><input id="rf-lot" placeholder="e.g. Lot 20755355, REF 20080370"></div>
+        <div class="field"><label>Lot Number / Serial Number <span style="color:var(--danger)">*</span></label><input id="rf-lot" placeholder="e.g. Lot 20755355, REF 20080370"></div>
         <div class="field"><label>Quantity Affected</label><input type="number" id="rf-qty" min="1" placeholder="e.g. 2"></div>
         <div class="field"><label>Approved Reimbursable Qty</label><input type="number" id="rf-qty-reimb" min="0" placeholder="0 if pending"></div>
         <div class="field"><label>BQMS Ticket # (if applicable)</label><input id="rf-ticket" placeholder="N/A"></div>
@@ -401,7 +401,8 @@ select option { background: var(--surface2); }
   </div>
 
   <div class="tab-bar">
-    <button class="active" onclick="labTab('queue',this)">Fail Review Queue</button>
+    <button class="active" onclick="labTab('queue',this)">On-Sequencer Fails</button>
+    <button onclick="labTab('reagents',this)">Individual Reagent Fails</button>
     <button onclick="labTab('settings',this)">Settings</button>
   </div>
 
@@ -446,6 +447,41 @@ select option { background: var(--surface2); }
     </div>
   </div>
 
+  <!-- REAGENT QUEUE TAB -->
+  <div id="lab-tab-reagents" class="tab-panel">
+    <div id="alert-lab-reagents"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div class="queue-filters">
+          <span class="text-muted" style="font-size:.8rem;">Show:</span>
+          <button class="filter-btn active" onclick="setReagentFilter('pending',this)">⏳ Pending</button>
+          <button class="filter-btn" onclick="setReagentFilter('all',this)">All</button>
+          <button class="filter-btn" onclick="setReagentFilter('reviewed',this)">✓ Reviewed</button>
+        </div>
+      </div>
+      <div class="queue-table-wrap">
+        <table class="queue-tbl">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Submitted By</th>
+              <th>Reagent Type</th>
+              <th>Lot / Serial #</th>
+              <th>Qty Affected</th>
+              <th>Ticket</th>
+              <th>Notes</th>
+              <th>Status</th>
+              <th>Qty Approved</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="reagent-queue-tbody"></tbody>
+        </table>
+      </div>
+      <div id="reagent-queue-empty" class="no-data hidden">No entries match the current filter.</div>
+    </div>
+  </div>
+
   <!-- SETTINGS TAB -->
   <div id="lab-tab-settings" class="tab-panel">
     <div id="alert-settings"></div>
@@ -480,8 +516,10 @@ const DEFAULT_SETTINGS = {
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 
 // Queue state
-let allFailData = [];
-let queueFilter = 'pending';
+let allFailData    = [];
+let allReagentData = [];
+let queueFilter   = 'pending';
+let reagentFilter = 'pending';
 
 // ═══════════════════════════════════════════════════════════════════════
 // LANES-PER-KIT (for kits+lanes display in Andrew's queue)
@@ -529,6 +567,7 @@ function labTab(id, btn) {
   document.querySelectorAll('#page-lab .tab-bar button').forEach(b => b.classList.remove('active'));
   document.getElementById('lab-tab-' + id).classList.add('active');
   btn.classList.add('active');
+  if (id === 'reagents') renderReagentQueue();
   if (id === 'settings') renderSettingsPanels();
 }
 
@@ -639,8 +678,8 @@ async function submitReagentFail() {
   const name = v('rf-name'), date = v('rf-date'), reagent = v('rf-reagent'),
         lot  = v('rf-lot'),  qty  = v('rf-qty'),  qtyR = v('rf-qty-reimb'),
         ticket = v('rf-ticket'), notes = v('rf-notes');
-  if (!name || !date || !reagent || !qty)
-    return showAlert('alert-submit', 'Please fill in: Name, Date, Reagent Type, and Quantity Affected.', 'error');
+  if (!name || !date || !reagent || !lot || !qty)
+    return showAlert('alert-submit', 'Please fill in: Name, Date, Reagent Type, Lot/Serial Number, and Quantity Affected.', 'error');
   spin('rf-spin', true);
   try {
     await post('submitReagentFail', { timestamp: new Date().toISOString(), name, date, reagent, lot, qty: +qty, qtyReimbursable: +qtyR || 0, ticket, notes });
@@ -767,9 +806,13 @@ async function submitStockpileReplenish() {
 // ═══════════════════════════════════════════════════════════════════════
 async function loadLabData() {
   try {
-    allFailData = await jsonp('getFailSubmissions');
+    [allFailData, allReagentData] = await Promise.all([
+      jsonp('getFailSubmissions'),
+      jsonp('getReagentSubmissions')
+    ]);
     renderQueue();
-  } catch(e) { showAlert('alert-lab', 'Could not load fail submissions: ' + e.message, 'error'); }
+    renderReagentQueue();
+  } catch(e) { showAlert('alert-lab', 'Could not load data: ' + e.message, 'error'); }
 }
 
 function setQueueFilter(filter, btn) {
@@ -846,6 +889,79 @@ async function saveFailEntry(uuid) {
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Save';
     showAlert('alert-lab', 'Save failed: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LAB MANAGER: REAGENT QUEUE
+// ═══════════════════════════════════════════════════════════════════════
+function setReagentFilter(filter, btn) {
+  reagentFilter = filter;
+  document.querySelectorAll('#lab-tab-reagents .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderReagentQueue();
+}
+
+function renderReagentQueue() {
+  let rows = allReagentData.filter(r => {
+    if (reagentFilter === 'pending')  return r.pending;
+    if (reagentFilter === 'reviewed') return !r.pending;
+    return true;
+  });
+
+  // Pending first, then by date descending
+  rows.sort((a, b) => {
+    if (a.pending !== b.pending) return a.pending ? -1 : 1;
+    return new Date(b.date) - new Date(a.date);
+  });
+
+  const tbody = g('reagent-queue-tbody');
+  const empty = g('reagent-queue-empty');
+  if (!rows.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = rows.map(r => {
+    const statusBadge = r.pending
+      ? `<span class="pill pill-pend">Pending</span>`
+      : `<span class="pill pill-done">Reviewed</span>`;
+    const approvedVal = r.qtyReimbursable !== null && r.qtyReimbursable !== undefined ? r.qtyReimbursable : '';
+    return `<tr class="${r.pending ? 'pending-row' : ''}" data-uuid="${r.uuid}">
+      <td style="white-space:nowrap">${r.date}</td>
+      <td>${r.name}</td>
+      <td><strong>${r.reagent||'—'}</strong></td>
+      <td style="font-size:.78rem;color:var(--muted)">${r.lot||'—'}</td>
+      <td>${r.qty}</td>
+      <td>${r.ticket ? `<code style="font-size:.78rem;color:var(--accent)">${r.ticket}</code>` : '—'}</td>
+      <td style="max-width:180px;font-size:.78rem;color:var(--muted)">${r.notes||'—'}</td>
+      <td>${statusBadge}</td>
+      <td><input class="inline-num" type="number" min="0" placeholder="—" value="${approvedVal}" id="rq-${r.uuid}" title="Enter 0 to mark approved with no reimbursement"></td>
+      <td><button class="btn btn-sm btn-success save-row-btn" onclick="saveReagentEntry('${r.uuid}')">Save</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveReagentEntry(uuid) {
+  const apEl = g('rq-' + uuid);
+  const qtyReimbursable = apEl.value !== '' ? +apEl.value : '';
+
+  const btn = apEl.closest('tr').querySelector('.save-row-btn');
+  btn.disabled = true; btn.textContent = '…';
+
+  try {
+    await post('updateReagentEntry', { uuid, qtyReimbursable });
+    // Optimistic update
+    const entry = allReagentData.find(r => r.uuid === uuid);
+    if (entry) {
+      entry.qtyReimbursable = qtyReimbursable !== '' ? qtyReimbursable : null;
+      entry.labReviewed     = true;
+      entry.pending         = false;
+    }
+    renderReagentQueue();
+    showAlert('alert-lab-reagents', '✓ Reagent entry updated successfully.', 'success');
+    setTimeout(() => { const al = g('alert-lab-reagents'); if (al) al.innerHTML = ''; }, 3000);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Save';
+    showAlert('alert-lab-reagents', 'Save failed: ' + e.message, 'error');
   }
 }
 
