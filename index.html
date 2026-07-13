@@ -198,6 +198,7 @@ select option { background: var(--surface2); }
           <select id="sf-group" onchange="updateKitOptions()">
             <option value="">— select —</option>
           </select>
+          <div id="sf-group-hint" style="font-size:.72rem;color:var(--muted);margin-top:4px;line-height:1.5"></div>
         </div>
         <div class="field"><label>Instrument Name</label><input id="sf-instrument" placeholder="e.g. EXB, SL-NXD"></div>
         <div class="field"><label>Flowcell ID</label><input id="sf-fcid" placeholder="e.g. 227FCGLT3"></div>
@@ -568,11 +569,21 @@ function setFormType(type) {
 function updateKitOptions() {
   const groupId = v('sf-group');
   const sel     = g('sf-kit');
+  const hint    = g('sf-group-hint');
   sel.innerHTML = '';
   const grp  = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId);
   const kits = grp ? (grp.kits || []) : [];
-  if (!kits.length) { sel.innerHTML = '<option value="">— select group first —</option>'; return; }
+  if (!kits.length) {
+    sel.innerHTML = '<option value="">— select group first —</option>';
+    if (hint) hint.innerHTML = '';
+    return;
+  }
   kits.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; sel.appendChild(o); });
+  // Update hint: show kit list so staff can confirm they picked the right group
+  if (hint) {
+    const laneNote = grp.lanesPerKit > 0 ? `${grp.lanesPerKit} lanes/kit · ` : '';
+    hint.textContent = laneNote + kits.join(', ');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -587,7 +598,9 @@ function populateDropdowns() {
   if (grpSel) {
     grpSel.innerHTML = '<option value="">— select —</option>';
     activeGroups.forEach(grp => {
-      const o = document.createElement('option'); o.value = grp.id; o.textContent = grp.label;
+      const o = document.createElement('option'); o.value = grp.id;
+      const laneInfo = grp.lanesPerKit > 0 ? ` (${grp.lanesPerKit} lanes/kit)` : '';
+      o.textContent = grp.label + laneInfo;
       grpSel.appendChild(o);
     });
   }
@@ -1029,9 +1042,19 @@ function renderSettingsPanels() {
 
   const activeHTML = activeGroups.map(grp => `
     <div class="setting-group" id="sg-grp-${grp.id}" style="margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <span class="setting-group-label" style="margin-bottom:0">${grp.label} · ${grp.lanesPerKit > 0 ? grp.lanesPerKit + ' lanes/kit' : 'no lane tracking'}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="setting-group-label" style="margin-bottom:0">Active Group</div>
         <button class="btn btn-sm btn-warn" onclick="retireRestoreGroup('${grp.id}',false)">Retire</button>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <div class="field">
+          <label>Group Name</label>
+          <input type="text" id="grp-label-${grp.id}" value="${grp.label}" oninput="updateGroupField('${grp.id}','label',this.value)">
+        </div>
+        <div class="field">
+          <label>Lanes per Kit (0 = no tracking)</label>
+          <input type="number" id="grp-lanes-${grp.id}" value="${grp.lanesPerKit}" min="0" oninput="updateGroupField('${grp.id}','lanesPerKit',+this.value)">
+        </div>
       </div>
       <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">KIT TYPES</div>
       <div class="tag-list" id="kit-tags-${grp.id}"></div>
@@ -1045,9 +1068,16 @@ function renderSettingsPanels() {
     <div class="section-label" style="margin-top:14px">Retired Groups</div>
     ${retiredGroups.map(grp => `
       <div class="setting-group" id="sg-grp-${grp.id}" style="margin-bottom:8px;opacity:.65">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span class="setting-group-label" style="margin-bottom:0">${grp.label} (retired)</span>
-          <button class="btn btn-sm btn-ghost" onclick="retireRestoreGroup('${grp.id}',true)">Restore</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="setting-group-label" style="margin-bottom:0">Retired Group</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-ghost" onclick="retireRestoreGroup('${grp.id}',true)">Restore</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteInstrumentGroup('${grp.id}')">Delete</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Group Name</label>
+          <input type="text" id="grp-label-${grp.id}" value="${grp.label}" oninput="updateGroupField('${grp.id}','label',this.value)">
         </div>
       </div>`).join('')}` : '';
 
@@ -1130,6 +1160,20 @@ function retireRestoreGroup(groupId, restore) {
   const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
   grp.active = !!restore;
   renderSettingsPanels(); // re-render so group moves to correct section
+}
+
+function deleteInstrumentGroup(groupId) {
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  if (!confirm(`Permanently delete "${grp.label}"? This cannot be undone.\n\nNote: historical sheet data for this group is unaffected — only the group definition is removed.`)) return;
+  SETTINGS.instrumentGroups = SETTINGS.instrumentGroups.filter(g => g.id !== groupId);
+  renderSettingsPanels();
+  showAlert('alert-settings', `"${grp.label}" deleted. Click "Save All Group Changes" to persist.`, 'success');
+}
+
+function updateGroupField(groupId, field, value) {
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  grp[field] = value;
+  // No re-render needed — input already shows the new value in place
 }
 
 function addInstrumentGroup() {
