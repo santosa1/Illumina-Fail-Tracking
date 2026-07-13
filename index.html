@@ -197,9 +197,6 @@ select option { background: var(--surface2); }
           <label>Instrument Group</label>
           <select id="sf-group" onchange="updateKitOptions()">
             <option value="">— select —</option>
-            <option value="novaX">NovaSeq X Plus</option>
-            <option value="nova6k">NovaSeq 6000 (Core)</option>
-            <option value="wus">WUS Instruments</option>
           </select>
         </div>
         <div class="field"><label>Instrument Name</label><input id="sf-instrument" placeholder="e.g. EXB, SL-NXD"></div>
@@ -305,9 +302,7 @@ select option { background: var(--surface2); }
 
   <div id="fas-tab-balances" class="tab-panel active">
     <div id="alert-fas"></div>
-    <div class="card"><div class="card-title">NovaSeq X Plus</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-novax"></tbody></table></div>
-    <div class="card"><div class="card-title">NovaSeq 6000 (Core)</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-nova6k"></tbody></table></div>
-    <div class="card"><div class="card-title">WUS Instruments</div><table class="tbl"><thead><tr><th>Kit</th><th>Lanes Failed</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-wus"></tbody></table></div>
+    <div id="fas-bal-groups"></div>
     <div class="card"><div class="card-title">Individual Reagents</div><table class="tbl"><thead><tr><th>Reagent</th><th>Qty Affected</th><th>Qty Approved</th><th>Qty Reimbursed</th><th>Balance</th></tr></thead><tbody id="bal-reagents"></tbody></table></div>
     <div class="card">
       <div class="card-title">NVX Stockpile</div>
@@ -413,9 +408,6 @@ select option { background: var(--surface2); }
         </div>
         <select id="queue-group-filter" onchange="renderQueue()" style="width:auto;padding:5px 10px;font-size:.8rem;">
           <option value="">All Instrument Groups</option>
-          <option value="novaX">NovaSeq X Plus</option>
-          <option value="nova6k">NovaSeq 6000</option>
-          <option value="wus">WUS</option>
         </select>
       </div>
       <div class="queue-table-wrap">
@@ -498,12 +490,14 @@ const LAB_PASSWORD = 'sbs321';
 // LIVE SETTINGS (loaded from Apps Script; fallback to defaults)
 // ═══════════════════════════════════════════════════════════════════════
 const DEFAULT_SETTINGS = {
+  instrumentGroups: [
+    { id: 'novaX',  label: 'NovaSeq X Plus',     kits: ['10B','25B','25B - 100c','5B'], lanesPerKit: 8, active: true },
+    { id: 'nova6k', label: 'NovaSeq 6000 (Core)', kits: ['NovaSeq SP 100','NovaSeq SP 200','NovaSeq SP 300','NovaSeq S1 100','NovaSeq S1 200','NovaSeq S1 300','NovaSeq S2 100','NovaSeq S2 200','NovaSeq S2 300','NovaSeq S4 200','NovaSeq S4 300'], lanesPerKit: 4, active: true },
+    { id: 'wus',    label: 'WUS Instruments',     kits: ['MiSeq 50','MiSeq 300','MiSeq 500','MiSeq 600','NextSeq 75','NextSeq 150','NextSeq 300','iSeq 300','NextSeq 2k P2 100','NextSeq 2k P2 300','NextSeq 2k P2 600','NextSeq 2k P3 100','NextSeq 2k P3 300'], lanesPerKit: 0, active: true }
+  ],
   teams:           ['Batch Sequencing', 'Flow Sequencing'],
   failModes:       ['Sequencing Failed', 'Pre-Run Check Failed', 'Software Error', 'Camera Error', 'Hardware Failure', 'Other'],
   sequencerStates: ['Red Tagged', 'Operational', 'Yellow Tagged'],
-  novaXKits:       ['10B', '25B', '25B - 100c', '5B'],
-  nova6kKits:      ['NovaSeq SP 100','NovaSeq SP 200','NovaSeq SP 300','NovaSeq S1 100','NovaSeq S1 200','NovaSeq S1 300','NovaSeq S2 100','NovaSeq S2 200','NovaSeq S2 300','NovaSeq S4 200','NovaSeq S4 300'],
-  wusKits:         ['MiSeq 50','MiSeq 300','MiSeq 500','MiSeq 600','NextSeq 75','NextSeq 150','NextSeq 300','iSeq 300','NextSeq 2k P2 100','NextSeq 2k P2 300','NextSeq 2k P2 600','NextSeq 2k P3 100','NextSeq 2k P3 300'],
   reagentTypes:    ['NovaSeq 10B Flowcell','NovaSeq 25B Flowcell','NovaSeq X Buffer','NovaSeq X Reagent','PRC NVX Buffer','PRC 25B Flowcell','Lyo Insert','NovaSeq Strip Tube','NovaSeq 6000 Cluster Kit','NovaSeq 6000 SBS','NovaSeq 6000 Flowcell','NovaSeq 6000 Buffer','NovaSeq Xp 4-Lane Kit','PLB','NextSeq 75','MiSeq 50'],
   nvxComponents:   ['10B Flowcell','25B Flowcell','NVX Buffer Cartridge']
 };
@@ -518,18 +512,14 @@ let reagentFilter = 'pending';
 // ═══════════════════════════════════════════════════════════════════════
 // LANES-PER-KIT (for kits+lanes display in Andrew's queue)
 // ═══════════════════════════════════════════════════════════════════════
-function lanesPerKit(group, kit) {
-  if (group === 'novaX') return 8;
-  if (group === 'nova6k') {
-    if (kit && kit.includes('SP')) return 2;
-    return 4;
-  }
-  return 0; // WUS — just show lanes
+function lanesPerKit(groupId) {
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId);
+  return grp ? (grp.lanesPerKit || 0) : 0;
 }
 
-function fmtKitsLanes(lanes, group, kit) {
+function fmtKitsLanes(lanes, groupId) {
   if (!lanes && lanes !== 0) return '—';
-  const lpk = lanesPerKit(group, kit);
+  const lpk = lanesPerKit(groupId);
   if (!lpk) return `${lanes} lane${lanes !== 1 ? 's' : ''}`;
   const kits = +(lanes / lpk).toFixed(1);
   return `${kits} kit${kits !== 1 ? 's' : ''} (${lanes} lanes)`;
@@ -576,10 +566,11 @@ function setFormType(type) {
 }
 
 function updateKitOptions() {
-  const group = v('sf-group');
-  const sel   = g('sf-kit');
+  const groupId = v('sf-group');
+  const sel     = g('sf-kit');
   sel.innerHTML = '';
-  const kits = group === 'novaX' ? SETTINGS.novaXKits : group === 'nova6k' ? SETTINGS.nova6kKits : group === 'wus' ? SETTINGS.wusKits : [];
+  const grp  = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId);
+  const kits = grp ? (grp.kits || []) : [];
   if (!kits.length) { sel.innerHTML = '<option value="">— select group first —</option>'; return; }
   kits.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; sel.appendChild(o); });
 }
@@ -588,6 +579,30 @@ function updateKitOptions() {
 // POPULATE DROPDOWNS FROM SETTINGS
 // ═══════════════════════════════════════════════════════════════════════
 function populateDropdowns() {
+  // Instrument group dropdown — submission form (active only) and queue filter (all)
+  const activeGroups = (SETTINGS.instrumentGroups || []).filter(grp => grp.active);
+  const allGroups    = (SETTINGS.instrumentGroups || []);
+
+  const grpSel = g('sf-group');
+  if (grpSel) {
+    grpSel.innerHTML = '<option value="">— select —</option>';
+    activeGroups.forEach(grp => {
+      const o = document.createElement('option'); o.value = grp.id; o.textContent = grp.label;
+      grpSel.appendChild(o);
+    });
+  }
+
+  // Lab queue group filter
+  const queueGrpSel = g('queue-group-filter');
+  if (queueGrpSel) {
+    queueGrpSel.innerHTML = '<option value="">All Instrument Groups</option>';
+    allGroups.forEach(grp => {
+      const o = document.createElement('option'); o.value = grp.id;
+      o.textContent = grp.label + (grp.active ? '' : ' (retired)');
+      queueGrpSel.appendChild(o);
+    });
+  }
+
   populateSelect('sf-failmode', SETTINGS.failModes);
   populateSelect('sf-state', SETTINGS.sequencerStates, '— select —');
   populateSelect('sf-team', SETTINGS.teams, '— select —');
@@ -599,23 +614,20 @@ function populateDropdowns() {
 function populateFASReimbSelect() {
   const sel = g('r-kit'); if (!sel) return;
   sel.innerHTML = '<option value="">— select —</option>';
-  const groups = [
-    { label: 'NovaSeq X Plus (lanes)',    items: SETTINGS.novaXKits },
-    { label: 'NovaSeq 6000 (lanes)',      items: SETTINGS.nova6kKits },
-    { label: 'WUS Instruments (lanes)',   items: SETTINGS.wusKits },
-    { label: 'Individual Reagents',       items: SETTINGS.reagentTypes }
-  ];
-  groups.forEach(({ label, items }) => {
-    if (!items || !items.length) return;
-    const grp = document.createElement('optgroup');
-    grp.label = label;
-    items.forEach(item => {
-      const o = document.createElement('option');
-      o.value = o.textContent = item;
-      grp.appendChild(o);
-    });
-    sel.appendChild(grp);
+  // One optgroup per instrument group (all groups, including retired — FAS may still log reimbursements for them)
+  (SETTINGS.instrumentGroups || []).forEach(grp => {
+    if (!grp.kits || !grp.kits.length) return;
+    const og = document.createElement('optgroup');
+    og.label = grp.label + (grp.active ? ' (lanes)' : ' (lanes, retired)');
+    grp.kits.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; og.appendChild(o); });
+    sel.appendChild(og);
   });
+  // Individual Reagents group
+  if (SETTINGS.reagentTypes && SETTINGS.reagentTypes.length) {
+    const og = document.createElement('optgroup'); og.label = 'Individual Reagents';
+    SETTINGS.reagentTypes.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; og.appendChild(o); });
+    sel.appendChild(og);
+  }
 }
 
 function populateSelect(id, items, placeholder) {
@@ -755,9 +767,23 @@ async function loadFASData() {
 }
 
 function renderBalances(data) {
-  renderBalTable('bal-novax',    data.novaX    || []);
-  renderBalTable('bal-nova6k',   data.nova6k   || []);
-  renderBalTable('bal-wus',      data.wus      || []);
+  // Dynamic group cards injected into fas-bal-groups placeholder
+  const container = g('fas-bal-groups');
+  if (container) {
+    const groups = data.groups || [];
+    if (!groups.length) {
+      container.innerHTML = '<p style="color:var(--muted);padding:8px 0">No instrument group data yet.</p>';
+    } else {
+      container.innerHTML = groups.map(grp => `
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">${grp.label}${!grp.active ? ' <span class="badge" style="background:var(--muted)">Retired</span>' : ''}</div>
+          <table class="tbl"><thead><tr><th>Kit / Run Type</th><th>Lanes Affected</th><th>Lanes Approved</th><th>Lanes Reimbursed</th><th>Balance</th></tr></thead>
+          <tbody id="bal-grp-${grp.id}"></tbody></table>
+        </div>`).join('');
+      groups.forEach(grp => renderBalTable('bal-grp-' + grp.id, grp.rows || []));
+    }
+  }
+  // Reagents card is static in HTML
   renderBalTable('bal-reagents', data.reagents || [], true);
 }
 
@@ -989,17 +1015,72 @@ const SETTING_LABELS = {
   teams:           'Teams',
   failModes:       'Fail Modes',
   sequencerStates: 'Sequencer States',
-  novaXKits:       'Kit Types — NovaSeq X Plus',
-  nova6kKits:      'Kit Types — NovaSeq 6000',
-  wusKits:         'Kit Types — WUS Instruments',
   reagentTypes:    'Reagent Types',
   nvxComponents:   'NVX Stockpile Components'
 };
 
 function renderSettingsPanels() {
   const container = g('settings-panels');
-  container.innerHTML = Object.entries(SETTING_LABELS).map(([key, label]) => `
-    <div class="setting-group" id="sg-${key}">
+
+  // ── Instrument Groups section ──────────────────────────────────────────
+  const groups = SETTINGS.instrumentGroups || [];
+  const activeGroups   = groups.filter(g => g.active);
+  const retiredGroups  = groups.filter(g => !g.active);
+
+  const activeHTML = activeGroups.map(grp => `
+    <div class="setting-group" id="sg-grp-${grp.id}" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span class="setting-group-label" style="margin-bottom:0">${grp.label} · ${grp.lanesPerKit > 0 ? grp.lanesPerKit + ' lanes/kit' : 'no lane tracking'}</span>
+        <button class="btn btn-sm btn-warn" onclick="retireRestoreGroup('${grp.id}',false)">Retire</button>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">KIT TYPES</div>
+      <div class="tag-list" id="kit-tags-${grp.id}"></div>
+      <div class="tag-add">
+        <input type="text" id="new-kit-${grp.id}" placeholder="Add kit type…" onkeydown="if(event.key==='Enter')addKitToGroup('${grp.id}')">
+        <button class="btn btn-sm btn-ghost" onclick="addKitToGroup('${grp.id}')">+ Add</button>
+      </div>
+    </div>`).join('');
+
+  const retiredHTML = retiredGroups.length ? `
+    <div class="section-label" style="margin-top:14px">Retired Groups</div>
+    ${retiredGroups.map(grp => `
+      <div class="setting-group" id="sg-grp-${grp.id}" style="margin-bottom:8px;opacity:.65">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="setting-group-label" style="margin-bottom:0">${grp.label} (retired)</span>
+          <button class="btn btn-sm btn-ghost" onclick="retireRestoreGroup('${grp.id}',true)">Restore</button>
+        </div>
+      </div>`).join('')}` : '';
+
+  const addGroupHTML = `
+    <div class="setting-group" style="margin-top:14px;border-style:dashed">
+      <div class="setting-group-label">Add New Instrument Group</div>
+      <div class="fg" style="margin-bottom:8px">
+        <div class="field">
+          <label>Group Name</label>
+          <input type="text" id="new-grp-label" placeholder="e.g. NovaSeq X 2">
+        </div>
+        <div class="field">
+          <label>Lanes per Kit (0 = no tracking)</label>
+          <input type="number" id="new-grp-lanes" placeholder="0" min="0" value="0">
+        </div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="addInstrumentGroup()">+ Add Group</button>
+    </div>`;
+
+  const instrGroupSection = `
+    <div class="setting-group" style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="setting-group-label" style="margin-bottom:0">Instrument Groups</div>
+        <button class="btn btn-sm btn-success" onclick="saveInstrumentGroups()"><span id="sspin-instrumentGroups" class="spinner hidden"></span> Save All Group Changes</button>
+      </div>
+      ${activeHTML || '<p style="color:var(--muted);font-size:.85rem">No active groups.</p>'}
+      ${retiredHTML}
+      ${addGroupHTML}
+    </div>`;
+
+  // ── Simple tag-list settings ───────────────────────────────────────────
+  const tagSettingsHTML = Object.entries(SETTING_LABELS).map(([key, label]) => `
+    <div class="setting-group" id="sg-${key}" style="margin-bottom:10px">
       <div class="setting-group-label">${label}</div>
       <div class="tag-list" id="tags-${key}"></div>
       <div class="tag-add">
@@ -1009,13 +1090,70 @@ function renderSettingsPanels() {
       <div class="mt2">
         <button class="btn btn-sm btn-success setting-save" onclick="saveSetting('${key}')"><span id="sspin-${key}" class="spinner hidden"></span> Save</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
+
+  container.innerHTML = instrGroupSection + tagSettingsHTML;
   refreshAllTagLists();
+  // Render kit tag lists for each active group
+  activeGroups.forEach(grp => refreshGroupKitList(grp.id));
 }
 
 function refreshAllTagLists() {
   Object.keys(SETTING_LABELS).forEach(refreshTagList);
+}
+
+// ── Instrument Group helpers ─────────────────────────────────────────────
+function refreshGroupKitList(groupId) {
+  const container = g('kit-tags-' + groupId); if (!container) return;
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  container.innerHTML = (grp.kits || []).map((k, i) =>
+    `<span class="tag">${k} <span class="tag-x" onclick="removeKitFromGroup('${groupId}',${i})">×</span></span>`
+  ).join('');
+}
+
+function addKitToGroup(groupId) {
+  const input = g('new-kit-' + groupId); if (!input) return;
+  const val = input.value.trim(); if (!val) return;
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  if (!grp.kits) grp.kits = [];
+  if (!grp.kits.includes(val)) { grp.kits.push(val); refreshGroupKitList(groupId); }
+  input.value = '';
+}
+
+function removeKitFromGroup(groupId, index) {
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  grp.kits.splice(index, 1);
+  refreshGroupKitList(groupId);
+}
+
+function retireRestoreGroup(groupId, restore) {
+  const grp = (SETTINGS.instrumentGroups || []).find(g => g.id === groupId); if (!grp) return;
+  grp.active = !!restore;
+  renderSettingsPanels(); // re-render so group moves to correct section
+}
+
+function addInstrumentGroup() {
+  const label = (g('new-grp-label')?.value || '').trim();
+  const lanes = parseInt(g('new-grp-lanes')?.value || '0', 10);
+  if (!label) return showAlert('alert-settings', 'Please enter a group name.', 'error');
+  const existing = SETTINGS.instrumentGroups || [];
+  // Generate a safe id from the label
+  const id = label.toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString().slice(-4);
+  existing.push({ id, label, kits: [], lanesPerKit: lanes, active: true });
+  SETTINGS.instrumentGroups = existing;
+  renderSettingsPanels();
+  showAlert('alert-settings', `✓ "${label}" added. Click "Save All Group Changes" to persist.`, 'success');
+}
+
+async function saveInstrumentGroups() {
+  spin('sspin-instrumentGroups', true);
+  try {
+    await post('updateSetting', { key: 'instrumentGroups', values: SETTINGS.instrumentGroups });
+    populateDropdowns();
+    showAlert('alert-settings', '✓ Instrument Groups saved. All dropdowns updated.', 'success');
+    setTimeout(() => { const al = g('alert-settings'); if (al) al.innerHTML = ''; }, 4000);
+  } catch(e) { showAlert('alert-settings', 'Save failed: ' + e.message, 'error'); }
+  finally { spin('sspin-instrumentGroups', false); }
 }
 
 function refreshTagList(key) {
@@ -1062,8 +1200,12 @@ async function loadSettings() {
   try {
     const data = await jsonp('getSettings');
     if (data && !data.error) {
-      // Merge with defaults for any missing keys
-      Object.keys(DEFAULT_SETTINGS).forEach(k => {
+      // instrumentGroups: array of objects — accept if non-empty array
+      if (data.instrumentGroups && Array.isArray(data.instrumentGroups) && data.instrumentGroups.length) {
+        SETTINGS.instrumentGroups = data.instrumentGroups;
+      }
+      // All other keys: simple string arrays
+      Object.keys(SETTING_LABELS).forEach(k => {
         if (data[k] && Array.isArray(data[k]) && data[k].length) SETTINGS[k] = data[k];
       });
     }
